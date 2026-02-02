@@ -5,18 +5,26 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 # ==============================================================================
-# CẤU HÌNH DỮ LIỆU (BẠN CHỈ CẦN THAY LINK CỦA BẠN VÀO ĐÂY)
+# CẤU HÌNH DỮ LIỆU
 # ==============================================================================
-# Dán link Google Sheets của bạn vào giữa 2 dấu ngoặc kép bên dưới
-LINK_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/edit?usp=sharing"
+# ĐÂY LÀ LINK GOOGLE SHEET CỦA BẠN (TÔI ĐÃ ĐIỀN SẴN)
+LINK_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1rDQWEIWBHOvs1trM60VPQevr4ndhrZwtfUJlgUz_diE/edit#gid=0"
 
-# Hàm hỗ trợ đọc dữ liệu từ Google Sheet
-@st.cache_data(ttl=60) # Tự động làm mới dữ liệu mỗi 60 giây
+# Hàm hỗ trợ đọc dữ liệu từ Google Sheet (Phiên bản V2 - Chấp nhận mọi loại Link)
+@st.cache_data(ttl=60) # Tự động làm mới mỗi 60 giây
 def load_data(sheet_name):
     try:
-        # Chuyển link view sang link export csv để máy đọc
-        csv_url = LINK_GOOGLE_SHEET.replace('/edit?usp=sharing', f'/gviz/tq?tqx=out:csv&sheet={sheet_name}')
-        csv_url = csv_url.replace('/edit#gid=', f'/gviz/tq?tqx=out:csv&sheet={sheet_name}')
+        # Bước 1: Lấy ID của Google Sheet từ đường Link
+        if "/d/" not in LINK_GOOGLE_SHEET:
+            return None
+        
+        # Tách lấy ID (đoạn mã nằm giữa /d/ và /edit)
+        sheet_id = LINK_GOOGLE_SHEET.split("/d/")[1].split("/")[0]
+        
+        # Bước 2: Tạo đường link xuất dữ liệu CSV chuẩn
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+        
+        # Bước 3: Đọc dữ liệu
         return pd.read_csv(csv_url)
     except Exception as e:
         return None
@@ -39,11 +47,11 @@ st.markdown("""
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành (Online)")
 
 # Tải dữ liệu
-df_congviec = load_data("CongViec") # Tên sheet 1 trên Google Sheet phải là CongViec
-df_lich = load_data("LichTuan")     # Tên sheet 2 trên Google Sheet phải là LichTuan
+df_congviec = load_data("CongViec") # Đọc sheet CongViec
+df_lich = load_data("LichTuan")     # Đọc sheet LichTuan
 
 if df_congviec is None or df_lich is None:
-    st.error("⚠️ Không đọc được dữ liệu! Vui lòng kiểm tra lại đường Link Google Sheets và tên Sheet (CongViec, LichTuan).")
+    st.error(f"⚠️ Không đọc được dữ liệu! Vui lòng kiểm tra lại quyền chia sẻ Google Sheet (Phải là 'Anyone with the link'). Link hiện tại: {LINK_GOOGLE_SHEET}")
     st.stop()
 
 # TẠO 2 TAB
@@ -58,21 +66,25 @@ with tab1:
     df.columns = df.columns.str.strip().str.title()
     if "Trạng Thải" in df.columns: df.rename(columns={"Trạng Thải": "Trạng Thái"}, inplace=True)
     
-    # Ép kiểu ngày tháng (Xử lý định dạng ngày trên Google Sheet)
+    # Ép kiểu ngày tháng
     df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
     df["Tiến Độ (%)"] = df["Tiến Độ (%)"].fillna(0)
 
     # Bộ lọc
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        selected_tro_ly = st.multiselect("Nhân sự:", df["Tên Trợ Lý"].unique(), default=df["Tên Trợ Lý"].unique())
+        # Nếu không có dữ liệu thì để danh sách rỗng
+        ds_tro_ly = df["Tên Trợ Lý"].unique() if "Tên Trợ Lý" in df.columns else []
+        selected_tro_ly = st.multiselect("Nhân sự:", ds_tro_ly, default=ds_tro_ly)
     with col_f2:
-        selected_trang_thai = st.multiselect("Trạng thái:", df["Trạng Thái"].unique(), default=df["Trạng Thái"].unique())
+        ds_trang_thai = df["Trạng Thái"].unique() if "Trạng Thái" in df.columns else []
+        selected_trang_thai = st.multiselect("Trạng thái:", ds_trang_thai, default=ds_trang_thai)
 
-    df_selection = df.query("`Tên Trợ Lý` == @selected_tro_ly & `Trạng Thái` == @selected_trang_thai").copy()
+    # Lọc dữ liệu
+    if not df.empty:
+        df_selection = df.query("`Tên Trợ Lý` == @selected_tro_ly & `Trạng Thái` == @selected_trang_thai").copy()
 
-    # KPI & Biểu đồ (Giữ nguyên logic cũ)
-    if not df_selection.empty:
+        # KPI
         c1, c2, c3, c4 = st.columns(4)
         now = datetime.now()
         viec_qua_han = len(df_selection[(~df_selection["Trạng Thái"].str.contains("Hoàn", na=False)) & (df_selection["Hạn Chót"] < now)])
@@ -84,23 +96,24 @@ with tab1:
         st.markdown("---")
         
         # Bảng phân tích
-        analysis_df = df_selection.groupby("Tên Trợ Lý").agg(
-            Tong_Viec=("Trạng Thái", "count"),
-            Viec_Da_Xong=("Trạng Thái", lambda x: x.str.contains("Hoàn", na=False).sum()),
-            Ty_Le_HT=("Tiến Độ (%)", "mean")
-        ).reset_index()
-        analysis_df["Ty_Le_HT_That"] = (analysis_df["Viec_Da_Xong"] / analysis_df["Tong_Viec"] * 100)
-        total = analysis_df["Tong_Viec"].sum()
-        analysis_df["Ty_Trong"] = (analysis_df["Tong_Viec"] / total * 100) if total > 0 else 0
-        
-        st.dataframe(
-            analysis_df.style.background_gradient(subset=["Ty_Trong", "Ty_Le_HT_That"], cmap="Blues"),
-            use_container_width=True,
-            column_config={
-                "Ty_Trong": st.column_config.ProgressColumn("Tỷ Trọng", format="%.1f%%", min_value=0, max_value=100),
-                "Ty_Le_HT_That": st.column_config.ProgressColumn("Tỷ Lệ Hoàn Thành", format="%.1f%%", min_value=0, max_value=100),
-            }
-        )
+        if "Tên Trợ Lý" in df_selection.columns:
+            analysis_df = df_selection.groupby("Tên Trợ Lý").agg(
+                Tong_Viec=("Trạng Thái", "count"),
+                Viec_Da_Xong=("Trạng Thái", lambda x: x.str.contains("Hoàn", na=False).sum()),
+                Ty_Le_HT=("Tiến Độ (%)", "mean")
+            ).reset_index()
+            analysis_df["Ty_Le_HT_That"] = (analysis_df["Viec_Da_Xong"] / analysis_df["Tong_Viec"] * 100)
+            total = analysis_df["Tong_Viec"].sum()
+            analysis_df["Ty_Trong"] = (analysis_df["Tong_Viec"] / total * 100) if total > 0 else 0
+            
+            st.dataframe(
+                analysis_df.style.background_gradient(subset=["Ty_Trong", "Ty_Le_HT_That"], cmap="Blues"),
+                use_container_width=True,
+                column_config={
+                    "Ty_Trong": st.column_config.ProgressColumn("Tỷ Trọng", format="%.1f%%", min_value=0, max_value=100),
+                    "Ty_Le_HT_That": st.column_config.ProgressColumn("Tỷ Lệ Hoàn Thành", format="%.1f%%", min_value=0, max_value=100),
+                }
+            )
 
         # Danh sách chi tiết
         st.subheader("📋 Danh sách công việc")
@@ -112,11 +125,12 @@ with tab1:
             if days < 0: return ['background-color: #d9534f; color: white'] * len(row)
             return [''] * len(row)
 
-        st.dataframe(
-            df_selection.sort_values("Hạn Chót").style.apply(to_mau_theo_han, axis=1),
-            use_container_width=True, height=500,
-            column_config={"Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY")}
-        )
+        if "Hạn Chót" in df_selection.columns:
+            st.dataframe(
+                df_selection.sort_values("Hạn Chót").style.apply(to_mau_theo_han, axis=1),
+                use_container_width=True, height=500,
+                column_config={"Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY")}
+            )
 
 # ==============================================================================
 # TAB 2: LỊCH CÔNG TÁC TUẦN (CO GIÃN THÔNG MINH)
@@ -149,9 +163,8 @@ with tab2:
     # Điền dữ liệu trống
     df_lich = df_lich.fillna("")
 
-    # Nhập chỉ huy (Phần này khi lên online sẽ reset mỗi khi load lại, 
-    # nếu muốn cố định thì phải nhập thẳng vào Google Sheet)
-    st.info("💡 Lưu ý: Trên bản Online, thông tin Trực chỉ huy nên nhập trực tiếp vào file Google Sheet để lưu cố định.")
+    # Nhập chỉ huy
+    st.info("💡 Lưu ý: Hãy nhập thông tin Trực chỉ huy vào file Google Sheet để lưu cố định.")
     
     # Hiển thị lịch
     if not df_lich.empty:
@@ -160,6 +173,23 @@ with tab2:
             cong_viec_ngay = df_lich[df_lich["Thứ Ngày"] == ngay]
             with st.container():
                 st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
-                st.dataframe(cong_viec_ngay, use_container_width=True, hide_index=True)
+                
+                # Cấu hình cột chi tiết
+                st.dataframe(
+                    cong_viec_ngay,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Trực Ban": st.column_config.TextColumn("Trực Ban", width="small"),
+                        "Thời Gian": st.column_config.TextColumn("Giờ", width="small"),
+                        "TTHV": st.column_config.TextColumn("TTHV", width="small"),
+                        "TT Phòng": st.column_config.TextColumn("TT Phòng", width="small"),
+                        "Chỉ huy Ban": st.column_config.TextColumn("CH Ban", width="small"),
+                        "Lực lượng tham gia": st.column_config.TextColumn("LL Tham Gia", width="small"),
+                        "Lực lượng phối hợp": st.column_config.TextColumn("LL Phối Hợp", width="small"),
+                        "Nội Dung": st.column_config.TextColumn("Nội Dung", width="medium"),
+                        "Địa Điểm": st.column_config.TextColumn("Đ.Điểm", width="small"),
+                    }
+                )
     else:
-        st.info("Chưa có dữ liệu.")
+        st.info("Chưa có dữ liệu lịch tuần.")
