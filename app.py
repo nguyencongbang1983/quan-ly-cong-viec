@@ -1,40 +1,23 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import matplotlib.pyplot as plt
 from datetime import datetime
 
 # ==============================================================================
-# CẤU HÌNH DỮ LIỆU
+# 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN HÃY DÁN LINK VỪA COPY VÀO ĐÂY)
 # ==============================================================================
-# ĐÂY LÀ LINK GOOGLE SHEET CỦA BẠN (TÔI ĐÃ ĐIỀN SẴN)
-LINK_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/1rDQWEIWBHOvs1trM60VPQevr4ndhrZwtfUJlgUz_diE/edit#gid=0"
 
-# Hàm hỗ trợ đọc dữ liệu từ Google Sheet (Phiên bản V2 - Chấp nhận mọi loại Link)
-@st.cache_data(ttl=60) # Tự động làm mới mỗi 60 giây
-def load_data(sheet_name):
-    try:
-        # Bước 1: Lấy ID của Google Sheet từ đường Link
-        if "/d/" not in LINK_GOOGLE_SHEET:
-            return None
-        
-        # Tách lấy ID (đoạn mã nằm giữa /d/ và /edit)
-        sheet_id = LINK_GOOGLE_SHEET.split("/d/")[1].split("/")[0]
-        
-        # Bước 2: Tạo đường link xuất dữ liệu CSV chuẩn
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-        
-        # Bước 3: Đọc dữ liệu
-        return pd.read_csv(csv_url)
-    except Exception as e:
-        return None
+# 1. Dán Link CSV của Sheet "CongViec" vào giữa 2 dấu ngoặc kép dưới đây:
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=0&single=true&output=csv"
+
+# 2. Dán Link CSV của Sheet "LichTuan" vào giữa 2 dấu ngoặc kép dưới đây:
+LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=689380875&single=true&output=csv"
 
 # ==============================================================================
-# CẤU HÌNH GIAO DIỆN
+# CẤU HÌNH GIAO DIỆN & HÀM ĐỌC
 # ==============================================================================
 st.set_page_config(page_title="Hệ Thống Quản Lý Online", layout="wide", page_icon="🌐")
 
-# CSS Tùy chỉnh (Giữ nguyên giao diện đẹp)
+# CSS Tùy chỉnh
 st.markdown("""
 <style>
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
@@ -46,12 +29,21 @@ st.markdown("""
 
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành (Online)")
 
-# Tải dữ liệu
-df_congviec = load_data("CongViec") # Đọc sheet CongViec
-df_lich = load_data("LichTuan")     # Đọc sheet LichTuan
+# Hàm đọc dữ liệu trực tiếp từ Link CSV
+@st.cache_data(ttl=60)
+def load_data_direct(link):
+    try:
+        if "google.com" not in link: return None
+        return pd.read_csv(link)
+    except: return None
 
+# Tải dữ liệu
+df_congviec = load_data_direct(LINK_CSV_CONG_VIEC)
+df_lich = load_data_direct(LINK_CSV_LICH_TUAN)
+
+# Kiểm tra lỗi
 if df_congviec is None or df_lich is None:
-    st.error(f"⚠️ Không đọc được dữ liệu! Vui lòng kiểm tra lại quyền chia sẻ Google Sheet (Phải là 'Anyone with the link'). Link hiện tại: {LINK_GOOGLE_SHEET}")
+    st.error("⚠️ Chưa đọc được dữ liệu! Hãy chắc chắn bạn đã thực hiện bước 'File > Share > Publish to web' và chọn định dạng CSV.")
     st.stop()
 
 # TẠO 2 TAB
@@ -61,26 +53,22 @@ tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Công Tác Tuầ
 # TAB 1: DASHBOARD
 # ==============================================================================
 with tab1:
-    # Xử lý dữ liệu công việc
     df = df_congviec.copy()
     df.columns = df.columns.str.strip().str.title()
     if "Trạng Thải" in df.columns: df.rename(columns={"Trạng Thải": "Trạng Thái"}, inplace=True)
     
-    # Ép kiểu ngày tháng
     df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
     df["Tiến Độ (%)"] = df["Tiến Độ (%)"].fillna(0)
 
     # Bộ lọc
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        # Nếu không có dữ liệu thì để danh sách rỗng
         ds_tro_ly = df["Tên Trợ Lý"].unique() if "Tên Trợ Lý" in df.columns else []
         selected_tro_ly = st.multiselect("Nhân sự:", ds_tro_ly, default=ds_tro_ly)
     with col_f2:
         ds_trang_thai = df["Trạng Thái"].unique() if "Trạng Thái" in df.columns else []
         selected_trang_thai = st.multiselect("Trạng thái:", ds_trang_thai, default=ds_trang_thai)
 
-    # Lọc dữ liệu
     if not df.empty:
         df_selection = df.query("`Tên Trợ Lý` == @selected_tro_ly & `Trạng Thái` == @selected_trang_thai").copy()
 
@@ -133,61 +121,40 @@ with tab1:
             )
 
 # ==============================================================================
-# TAB 2: LỊCH CÔNG TÁC TUẦN (CO GIÃN THÔNG MINH)
+# TAB 2: LỊCH CÔNG TÁC TUẦN
 # ==============================================================================
 with tab2:
     tong_so_viec = len(df_lich)
-    
-    # Logic co giãn
-    if tong_so_viec <= 10:
-        font_size = "16px"; padding = "1rem"; header_size = "20px"
-    elif tong_so_viec <= 20:
-        font_size = "14px"; padding = "0.5rem"; header_size = "18px"
-    else:
-        font_size = "12px"; padding = "0.2rem"; header_size = "14px"
+    if tong_so_viec <= 10: font_size = "16px"; padding = "1rem"
+    elif tong_so_viec <= 20: font_size = "14px"; padding = "0.5rem"
+    else: font_size = "12px"; padding = "0.2rem"
 
-    st.markdown(f"""
-    <style>
-        div[data-testid="stDataFrame"] {{ font-size: {font_size} !important; }}
-        td {{ padding-top: {padding} !important; padding-bottom: {padding} !important; line-height: 1.2 !important; }}
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<style>div[data-testid="stDataFrame"] {{ font-size: {font_size} !important; }} td {{ padding-top: {padding} !important; padding-bottom: {padding} !important; line-height: 1.2 !important; }}</style>""", unsafe_allow_html=True)
 
-    # Hàm sửa giờ
-    def chinh_sua_gio(val):
-        return str(val).replace("nan","")
-
-    if "Thời Gian" in df_lich.columns:
-        df_lich["Thời Gian"] = df_lich["Thời Gian"].apply(chinh_sua_gio)
-    
-    # Điền dữ liệu trống
+    def chinh_sua_gio(val): return str(val).replace("nan","")
+    if "Thời Gian" in df_lich.columns: df_lich["Thời Gian"] = df_lich["Thời Gian"].apply(chinh_sua_gio)
     df_lich = df_lich.fillna("")
 
-    # Nhập chỉ huy
-    st.info("💡 Lưu ý: Hãy nhập thông tin Trực chỉ huy vào file Google Sheet để lưu cố định.")
+    st.info("💡 Lưu ý: Cập nhật Trực chỉ huy trong Google Sheet.")
     
-    # Hiển thị lịch
     if not df_lich.empty:
         cac_ngay = df_lich["Thứ Ngày"].unique()
         for ngay in cac_ngay:
             cong_viec_ngay = df_lich[df_lich["Thứ Ngày"] == ngay]
             with st.container():
                 st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
-                
-                # Cấu hình cột chi tiết
                 st.dataframe(
                     cong_viec_ngay,
-                    use_container_width=True,
-                    hide_index=True,
+                    use_container_width=True, hide_index=True,
                     column_config={
                         "Trực Ban": st.column_config.TextColumn("Trực Ban", width="small"),
                         "Thời Gian": st.column_config.TextColumn("Giờ", width="small"),
+                        "Nội Dung": st.column_config.TextColumn("Nội Dung", width="medium"),
                         "TTHV": st.column_config.TextColumn("TTHV", width="small"),
                         "TT Phòng": st.column_config.TextColumn("TT Phòng", width="small"),
                         "Chỉ huy Ban": st.column_config.TextColumn("CH Ban", width="small"),
                         "Lực lượng tham gia": st.column_config.TextColumn("LL Tham Gia", width="small"),
                         "Lực lượng phối hợp": st.column_config.TextColumn("LL Phối Hợp", width="small"),
-                        "Nội Dung": st.column_config.TextColumn("Nội Dung", width="medium"),
                         "Địa Điểm": st.column_config.TextColumn("Đ.Điểm", width="small"),
                     }
                 )
