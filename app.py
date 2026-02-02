@@ -3,13 +3,13 @@ import pandas as pd
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN HÃY DÁN LINK VỪA COPY VÀO ĐÂY)
+# 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN HÃY DÁN LẠI LINK CỦA BẠN VÀO ĐÂY)
 # ==============================================================================
 
-# 1. Dán Link CSV của Sheet "CongViec" vào giữa 2 dấu ngoặc kép dưới đây:
+# 1. Dán Link CSV của Sheet "CongViec" vào đây:
 LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=0&single=true&output=csv"
 
-# 2. Dán Link CSV của Sheet "LichTuan" vào giữa 2 dấu ngoặc kép dưới đây:
+# 2. Dán Link CSV của Sheet "LichTuan" vào đây:
 LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=689380875&single=true&output=csv"
 
 # ==============================================================================
@@ -43,7 +43,7 @@ df_lich = load_data_direct(LINK_CSV_LICH_TUAN)
 
 # Kiểm tra lỗi
 if df_congviec is None or df_lich is None:
-    st.error("⚠️ Chưa đọc được dữ liệu! Hãy chắc chắn bạn đã thực hiện bước 'File > Share > Publish to web' và chọn định dạng CSV.")
+    st.error("⚠️ Chưa đọc được dữ liệu! Hãy chắc chắn bạn đã dán đúng Link CSV từ bước 'Publish to web' vào code.")
     st.stop()
 
 # TẠO 2 TAB
@@ -103,21 +103,74 @@ with tab1:
                 }
             )
 
-        # Danh sách chi tiết
+        # --------------------------------------------------------------------------
+        # DANH SÁCH CHI TIẾT (LOGIC MỚI: XỬ LÝ NGÀY TRỄ + SẮP XẾP)
+        # --------------------------------------------------------------------------
         st.subheader("📋 Danh sách công việc")
-        def to_mau_theo_han(row):
-            tt = str(row["Trạng Thái"]).lower()
-            if 'hoàn' in tt: return ['background-color: #28a745; color: white'] * len(row)
-            if pd.isna(row["Hạn Chót"]): return [''] * len(row)
-            days = (row["Hạn Chót"] - now).days
-            if days < 0: return ['background-color: #d9534f; color: white'] * len(row)
-            return [''] * len(row)
+        
+        # 1. Hàm XỬ LÝ DỮ LIỆU: Tính ngày trễ và gán số thứ tự
+        # Sort Order: 1 = Hoàn thành, 2 = Đang làm, 3 = Quá hạn (Theo ý bạn)
+        def xu_ly_trang_thai_va_sap_xep(row):
+            trang_thai = str(row["Trạng Thái"])
+            han_chot = row["Hạn Chót"]
+            
+            # --- TRƯỜNG HỢP 1: HOÀN THÀNH (LÊN ĐẦU) ---
+            if 'Hoàn' in trang_thai:
+                return trang_thai, 1 # Sort = 1
+            
+            # --- TRƯỜNG HỢP 2: QUÁ HẠN (XUỐNG CUỐI + TÍNH NGÀY) ---
+            # Kiểm tra nếu có ngày hạn và ngày hạn nhỏ hơn hôm nay
+            if pd.notna(han_chot) and han_chot < now:
+                so_ngay_tre = (now - han_chot).days
+                if so_ngay_tre > 0:
+                    # Thêm dòng chữ cảnh báo vào trạng thái
+                    new_status = f"{trang_thai} ⚠️ (Trễ {so_ngay_tre} ngày)"
+                    return new_status, 3 # Sort = 3 (Xuống đáy)
+            
+            # Nếu đã có chữ "Chậm" trong file Excel sẵn rồi thì cũng đẩy xuống
+            if 'Chậm' in trang_thai or 'Trễ' in trang_thai:
+                 return trang_thai, 3
 
-        if "Hạn Chót" in df_selection.columns:
+            # --- TRƯỜNG HỢP 3: ĐANG LÀM (Ở GIỮA) ---
+            return trang_thai, 2 # Sort = 2
+
+        # 2. Áp dụng hàm vào dữ liệu
+        # Tạo 2 cột tạm: 'Trạng Thái Hiển Thị' và 'Sort_Order'
+        df_selection[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_selection.apply(
+            lambda row: pd.Series(xu_ly_trang_thai_va_sap_xep(row)), axis=1
+        )
+        
+        # 3. Sắp xếp: Theo Sort_Order (1->2->3) rồi đến Ngày hạn
+        df_display = df_selection.sort_values(by=["Sort_Order", "Hạn Chót"], ascending=[True, True])
+
+        # 4. HÀM TÔ MÀU (Dựa trên cột Sort_Order đã tính)
+        def style_rows(row):
+            uu_tien = row["Sort_Order"]
+            
+            if uu_tien == 1: # Hoàn thành
+                return ['background-color: #28a745; color: white'] * len(row) # Xanh lá
+            elif uu_tien == 2: # Đang làm
+                return ['background-color: #ffa421; color: black'] * len(row) # Vàng cam
+            else: # Quá hạn (uu_tien == 3)
+                return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row) # Đỏ rực
+
+        # 5. Hiển thị
+        if "Hạn Chót" in df_display.columns:
+            # Thay cột Trạng thái gốc bằng cột đã thêm chữ "Trễ X ngày"
+            df_final = df_display.drop(columns=["Trạng Thái", "Sort_Order"]).rename(columns={"Trạng Thái Hiển Thị": "Trạng Thái"})
+            
+            # Đưa cột Trạng Thái về vị trí cũ (hoặc để cuối tùy pandas, ở đây ta hiển thị theo column_config)
+            cols = ["Tên Trợ Lý", "Nhiệm Vụ", "Trạng Thái", "Tiến Độ (%)", "Chất Lượng (1-10)", "Hạn Chót"]
+            # Chỉ lấy các cột có trong dữ liệu thực tế
+            cols = [c for c in cols if c in df_final.columns]
+            
             st.dataframe(
-                df_selection.sort_values("Hạn Chót").style.apply(to_mau_theo_han, axis=1),
-                use_container_width=True, height=500,
-                column_config={"Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY")}
+                df_final[cols].style.apply(style_rows, axis=1),
+                use_container_width=True, height=600,
+                column_config={
+                    "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
+                    "Trạng Thái": st.column_config.TextColumn("Trạng Thái", width="large"), # Cột này sẽ dài hơn vì có thêm chữ "Trễ X ngày"
+                }
             )
 
 # ==============================================================================
