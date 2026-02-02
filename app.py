@@ -104,72 +104,69 @@ with tab1:
             )
 
         # --------------------------------------------------------------------------
-        # DANH SÁCH CHI TIẾT (LOGIC MỚI: XỬ LÝ NGÀY TRỄ + SẮP XẾP)
+        # DANH SÁCH CHI TIẾT (ĐÃ SỬA LỖI KEY ERROR)
         # --------------------------------------------------------------------------
         st.subheader("📋 Danh sách công việc")
         
-        # 1. Hàm XỬ LÝ DỮ LIỆU: Tính ngày trễ và gán số thứ tự
-        # Sort Order: 1 = Hoàn thành, 2 = Đang làm, 3 = Quá hạn (Theo ý bạn)
-        def xu_ly_trang_thai_va_sap_xep(row):
+        # 1. HÀM XỬ LÝ
+        def xu_ly_logic(row):
             trang_thai = str(row["Trạng Thái"])
             han_chot = row["Hạn Chót"]
             
-            # --- TRƯỜNG HỢP 1: HOÀN THÀNH (LÊN ĐẦU) ---
+            # Mặc định
+            new_status = trang_thai
+            sort_order = 2 # Đang làm (Vàng)
+
             if 'Hoàn' in trang_thai:
-                return trang_thai, 1 # Sort = 1
+                sort_order = 1 # Xanh (Lên đầu)
             
-            # --- TRƯỜNG HỢP 2: QUÁ HẠN (XUỐNG CUỐI + TÍNH NGÀY) ---
-            # Kiểm tra nếu có ngày hạn và ngày hạn nhỏ hơn hôm nay
-            if pd.notna(han_chot) and han_chot < now:
+            elif pd.notna(han_chot) and han_chot < now:
                 so_ngay_tre = (now - han_chot).days
                 if so_ngay_tre > 0:
-                    # Thêm dòng chữ cảnh báo vào trạng thái
                     new_status = f"{trang_thai} ⚠️ (Trễ {so_ngay_tre} ngày)"
-                    return new_status, 3 # Sort = 3 (Xuống đáy)
+                    sort_order = 3 # Đỏ (Xuống đáy)
             
-            # Nếu đã có chữ "Chậm" trong file Excel sẵn rồi thì cũng đẩy xuống
-            if 'Chậm' in trang_thai or 'Trễ' in trang_thai:
-                 return trang_thai, 3
+            elif 'Chậm' in trang_thai or 'Trễ' in trang_thai:
+                sort_order = 3 # Đỏ
+            
+            return new_status, sort_order
 
-            # --- TRƯỜNG HỢP 3: ĐANG LÀM (Ở GIỮA) ---
-            return trang_thai, 2 # Sort = 2
-
-        # 2. Áp dụng hàm vào dữ liệu
-        # Tạo 2 cột tạm: 'Trạng Thái Hiển Thị' và 'Sort_Order'
-        df_selection[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_selection.apply(
-            lambda row: pd.Series(xu_ly_trang_thai_va_sap_xep(row)), axis=1
+        # 2. Áp dụng logic
+        df_selection[['Trạng Thái Mới', 'Sort_Order']] = df_selection.apply(
+            lambda row: pd.Series(xu_ly_logic(row)), axis=1
         )
         
-        # 3. Sắp xếp: Theo Sort_Order (1->2->3) rồi đến Ngày hạn
+        # 3. Cập nhật lại cột Trạng Thái chính thức (để hiển thị chữ Trễ ngày)
+        df_selection["Trạng Thái"] = df_selection["Trạng Thái Mới"]
+
+        # 4. Sắp xếp: Sort_Order (1->2->3) rồi đến Hạn chót
+        # QUAN TRỌNG: Giữ lại cột Sort_Order, KHÔNG ĐƯỢC DROP NÓ ĐI
         df_display = df_selection.sort_values(by=["Sort_Order", "Hạn Chót"], ascending=[True, True])
 
-        # 4. HÀM TÔ MÀU (Dựa trên cột Sort_Order đã tính)
+        # 5. Hàm tô màu (Bây giờ nó sẽ tìm thấy cột Sort_Order)
         def style_rows(row):
             uu_tien = row["Sort_Order"]
-            
             if uu_tien == 1: # Hoàn thành
-                return ['background-color: #28a745; color: white'] * len(row) # Xanh lá
+                return ['background-color: #28a745; color: white'] * len(row)
             elif uu_tien == 2: # Đang làm
-                return ['background-color: #ffa421; color: black'] * len(row) # Vàng cam
-            else: # Quá hạn (uu_tien == 3)
-                return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row) # Đỏ rực
+                return ['background-color: #ffa421; color: black'] * len(row)
+            else: # Quá hạn
+                return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row)
 
-        # 5. Hiển thị
+        # 6. Hiển thị và ẨN CỘT Sort_Order bằng column_config
+        cols_to_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Trạng Thái", "Tiến Độ (%)", "Chất Lượng (1-10)", "Hạn Chót", "Sort_Order"]
+        # Chỉ lấy cột nào thực sự có
+        available_cols = [c for c in cols_to_show if c in df_display.columns]
+
         if "Hạn Chót" in df_display.columns:
-            # Thay cột Trạng thái gốc bằng cột đã thêm chữ "Trễ X ngày"
-            df_final = df_display.drop(columns=["Trạng Thái", "Sort_Order"]).rename(columns={"Trạng Thái Hiển Thị": "Trạng Thái"})
-            
-            # Đưa cột Trạng Thái về vị trí cũ (hoặc để cuối tùy pandas, ở đây ta hiển thị theo column_config)
-            cols = ["Tên Trợ Lý", "Nhiệm Vụ", "Trạng Thái", "Tiến Độ (%)", "Chất Lượng (1-10)", "Hạn Chót"]
-            # Chỉ lấy các cột có trong dữ liệu thực tế
-            cols = [c for c in cols if c in df_final.columns]
-            
             st.dataframe(
-                df_final[cols].style.apply(style_rows, axis=1),
+                df_display[available_cols].style.apply(style_rows, axis=1),
                 use_container_width=True, height=600,
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
-                    "Trạng Thái": st.column_config.TextColumn("Trạng Thái", width="large"), # Cột này sẽ dài hơn vì có thêm chữ "Trễ X ngày"
+                    "Trạng Thái": st.column_config.TextColumn("Trạng Thái", width="large"),
+                    "Sort_Order": None,       # <--- BÍ KÍP Ở ĐÂY: None nghĩa là ẩn cột này đi
+                    "Trạng Thái Mới": None    # Ẩn cột tạm
                 }
             )
 
