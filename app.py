@@ -5,8 +5,8 @@ from datetime import datetime
 # ==============================================================================
 # 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN DÁN LINK CSV CỦA BẠN VÀO ĐÂY)
 # ==============================================================================
-LINK_CSV_CONG_VIEC = "DÁN_LINK_CONG_VIEC_CUA_BAN_VAO_DAY"
-LINK_CSV_LICH_TUAN = "DÁN_LINK_LICH_TUAN_CUA_BAN_VAO_DAY"
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
+LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=959725079&single=true&output=csv"
 
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN
