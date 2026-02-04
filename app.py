@@ -3,210 +3,139 @@ import pandas as pd
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN HÃY DÁN LẠI LINK CỦA BẠN VÀO ĐÂY)
+# 🔴 DÁN LINK CSV MỚI CỦA BẠN VÀO 2 DÒNG DƯỚI ĐÂY
+# (Link phải có đuôi output=csv)
 # ==============================================================================
-
-# 1. Dán Link CSV của Sheet "CongViec" vào đây:
-LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=0&single=true&output=csv"
-
-# 2. Dán Link CSV của Sheet "LichTuan" vào đây:
-LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQGBFEMqSqVkBhaym0YZilrmjtYlyN-F4qv5ypElMQyf-YPFxcXmAE_pBpWY4gg7y43H7HT9FT0JgpM/pub?gid=689380875&single=true&output=csv"
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
+LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=959725079&single=true&output=csv"
 
 # ==============================================================================
-# CẤU HÌNH GIAO DIỆN & HÀM ĐỌC
+# CẤU HÌNH
 # ==============================================================================
-st.set_page_config(page_title="Hệ Thống Quản Lý Online", layout="wide", page_icon="🌐")
+st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
+st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
-# CSS Tùy chỉnh
-st.markdown("""
-<style>
-    div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
-    h1 { text-align: center; color: #4da6ff; }
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem; }
-    div[data-testid="stDataFrame"] { font-size: 14px; }
-</style>
-""", unsafe_allow_html=True)
+# NÚT LÀM MỚI DỮ LIỆU THỦ CÔNG
+if st.button("🔄 BẤM VÀO ĐÂY ĐỂ CẬP NHẬT DỮ LIỆU MỚI NHẤT"):
+    st.cache_data.clear()
 
-st.title("🌐 Hệ Thống Quản Lý & Điều Hành (Online)")
-
-# Hàm đọc dữ liệu trực tiếp từ Link CSV
-@st.cache_data(ttl=60)
-def load_data_direct(link):
+# ==============================================================================
+# HÀM ĐỌC DỮ LIỆU (ĐÃ TẮT CACHE ĐỂ SỬA LỖI)
+# ==============================================================================
+def load_data_force(link):
     try:
-        if "google.com" not in link: return None
-        return pd.read_csv(link)
-    except: return None
+        # Thêm tham số ngẫu nhiên để lừa máy chủ Google trả về dữ liệu mới nhất
+        if "?" in link:
+            link_new = f"{link}&cache_buster={datetime.now().timestamp()}"
+        else:
+            link_new = f"{link}?cache_buster={datetime.now().timestamp()}"
+            
+        return pd.read_csv(link_new)
+    except Exception as e:
+        return None
 
 # Tải dữ liệu
-df_congviec = load_data_direct(LINK_CSV_CONG_VIEC)
-df_lich = load_data_direct(LINK_CSV_LICH_TUAN)
+df_congviec = load_data_force(LINK_CSV_CONG_VIEC)
+df_lich = load_data_force(LINK_CSV_LICH_TUAN)
 
-# Kiểm tra lỗi
-if df_congviec is None or df_lich is None:
-    st.error("⚠️ Chưa đọc được dữ liệu! Hãy chắc chắn bạn đã dán đúng Link CSV từ bước 'Publish to web' vào code.")
+# 🛑 KIỂM TRA NGAY LẬP TỨC
+if df_congviec is None:
+    st.error("⚠️ Lỗi: Link CSV không hoạt động. Vui lòng kiểm tra lại đường link.")
     st.stop()
 
-# TẠO 2 TAB
-tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Công Tác Tuần"])
+# Hiển thị thông tin cột để Debug (Bạn sẽ thấy cái này trên Web)
+st.info(f"ℹ️ Máy tính đang đọc được {len(df_congviec)} công việc. Các cột tìm thấy: {list(df_congviec.columns)}")
 
 # ==============================================================================
-# TAB 1: DASHBOARD
+# XỬ LÝ DỮ LIỆU
 # ==============================================================================
+# 1. Xóa khoảng trắng thừa
+df_congviec.columns = df_congviec.columns.str.strip()
+
+# 2. Đổi tên cột chuẩn xác
+for col in df_congviec.columns:
+    if "Chỉ" in col and "Đạo" in col:
+        df_congviec.rename(columns={col: "Chỉ Đạo"}, inplace=True)
+    if "Trạng" in col and "Thái" in col: # Xử lý cả Trạng Thải/Trạng Thái
+        df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
+
+# ==============================================================================
+# HIỂN THỊ DASHBOARD
+# ==============================================================================
+tab1, tab2 = st.tabs(["📊 Công Việc", "📅 Lịch Tuần"])
+
 with tab1:
     df = df_congviec.copy()
-    df.columns = df.columns.str.strip().str.title()
-    if "Trạng Thải" in df.columns: df.rename(columns={"Trạng Thải": "Trạng Thái"}, inplace=True)
     
-    df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
-    df["Tiến Độ (%)"] = df["Tiến Độ (%)"].fillna(0)
+    # Ép kiểu ngày
+    if "Hạn Chót" in df.columns:
+        df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
 
     # Bộ lọc
     col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        ds_tro_ly = df["Tên Trợ Lý"].unique() if "Tên Trợ Lý" in df.columns else []
-        selected_tro_ly = st.multiselect("Nhân sự:", ds_tro_ly, default=ds_tro_ly)
-    with col_f2:
-        ds_trang_thai = df["Trạng Thái"].unique() if "Trạng Thái" in df.columns else []
-        selected_trang_thai = st.multiselect("Trạng thái:", ds_trang_thai, default=ds_trang_thai)
-
-    if not df.empty:
-        df_selection = df.query("`Tên Trợ Lý` == @selected_tro_ly & `Trạng Thái` == @selected_trang_thai").copy()
-
-        # KPI
-        c1, c2, c3, c4 = st.columns(4)
-        now = datetime.now()
-        viec_qua_han = len(df_selection[(~df_selection["Trạng Thái"].str.contains("Hoàn", na=False)) & (df_selection["Hạn Chót"] < now)])
-        c1.metric("Tổng việc", len(df_selection))
-        c2.metric("Đã xong", len(df_selection[df_selection["Trạng Thái"].str.contains("Hoàn", na=False)]))
-        c3.metric("🚨 Quá hạn", viec_qua_han)
-        c4.metric("Ngày báo cáo", now.strftime("%d/%m/%Y"))
-
-        st.markdown("---")
-        
-        # Bảng phân tích
-        if "Tên Trợ Lý" in df_selection.columns:
-            analysis_df = df_selection.groupby("Tên Trợ Lý").agg(
-                Tong_Viec=("Trạng Thái", "count"),
-                Viec_Da_Xong=("Trạng Thái", lambda x: x.str.contains("Hoàn", na=False).sum()),
-                Ty_Le_HT=("Tiến Độ (%)", "mean")
-            ).reset_index()
-            analysis_df["Ty_Le_HT_That"] = (analysis_df["Viec_Da_Xong"] / analysis_df["Tong_Viec"] * 100)
-            total = analysis_df["Tong_Viec"].sum()
-            analysis_df["Ty_Trong"] = (analysis_df["Tong_Viec"] / total * 100) if total > 0 else 0
-            
-            st.dataframe(
-                analysis_df.style.background_gradient(subset=["Ty_Trong", "Ty_Le_HT_That"], cmap="Blues"),
-                use_container_width=True,
-                column_config={
-                    "Ty_Trong": st.column_config.ProgressColumn("Tỷ Trọng", format="%.1f%%", min_value=0, max_value=100),
-                    "Ty_Le_HT_That": st.column_config.ProgressColumn("Tỷ Lệ Hoàn Thành", format="%.1f%%", min_value=0, max_value=100),
-                }
-            )
-
-        # --------------------------------------------------------------------------
-        # DANH SÁCH CHI TIẾT (ĐÃ SỬA LỖI KEY ERROR)
-        # --------------------------------------------------------------------------
-        st.subheader("📋 Danh sách công việc")
-        
-        # 1. HÀM XỬ LÝ
-        def xu_ly_logic(row):
-            trang_thai = str(row["Trạng Thái"])
-            han_chot = row["Hạn Chót"]
-            
-            # Mặc định
-            new_status = trang_thai
-            sort_order = 2 # Đang làm (Vàng)
-
-            if 'Hoàn' in trang_thai:
-                sort_order = 1 # Xanh (Lên đầu)
-            
-            elif pd.notna(han_chot) and han_chot < now:
-                so_ngay_tre = (now - han_chot).days
-                if so_ngay_tre > 0:
-                    new_status = f"{trang_thai} ⚠️ (Trễ {so_ngay_tre} ngày)"
-                    sort_order = 3 # Đỏ (Xuống đáy)
-            
-            elif 'Chậm' in trang_thai or 'Trễ' in trang_thai:
-                sort_order = 3 # Đỏ
-            
-            return new_status, sort_order
-
-        # 2. Áp dụng logic
-        df_selection[['Trạng Thái Mới', 'Sort_Order']] = df_selection.apply(
-            lambda row: pd.Series(xu_ly_logic(row)), axis=1
-        )
-        
-        # 3. Cập nhật lại cột Trạng Thái chính thức (để hiển thị chữ Trễ ngày)
-        df_selection["Trạng Thái"] = df_selection["Trạng Thái Mới"]
-
-        # 4. Sắp xếp: Sort_Order (1->2->3) rồi đến Hạn chót
-        # QUAN TRỌNG: Giữ lại cột Sort_Order, KHÔNG ĐƯỢC DROP NÓ ĐI
-        df_display = df_selection.sort_values(by=["Sort_Order", "Hạn Chót"], ascending=[True, True])
-
-        # 5. Hàm tô màu (Bây giờ nó sẽ tìm thấy cột Sort_Order)
-        def style_rows(row):
-            uu_tien = row["Sort_Order"]
-            if uu_tien == 1: # Hoàn thành
-                return ['background-color: #28a745; color: white'] * len(row)
-            elif uu_tien == 2: # Đang làm
-                return ['background-color: #ffa421; color: black'] * len(row)
-            else: # Quá hạn
-                return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row)
-
-        # 6. Hiển thị và ẨN CỘT Sort_Order bằng column_config
-        cols_to_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Trạng Thái", "Tiến Độ (%)", "Chất Lượng (1-10)", "Hạn Chót", "Sort_Order"]
-        # Chỉ lấy cột nào thực sự có
-        available_cols = [c for c in cols_to_show if c in df_display.columns]
-
-        if "Hạn Chót" in df_display.columns:
-            st.dataframe(
-                df_display[available_cols].style.apply(style_rows, axis=1),
-                use_container_width=True, height=600,
-                column_config={
-                    "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
-                    "Trạng Thái": st.column_config.TextColumn("Trạng Thái", width="large"),
-                    "Sort_Order": None,       # <--- BÍ KÍP Ở ĐÂY: None nghĩa là ẩn cột này đi
-                    "Trạng Thái Mới": None    # Ẩn cột tạm
-                }
-            )
-
-# ==============================================================================
-# TAB 2: LỊCH CÔNG TÁC TUẦN
-# ==============================================================================
-with tab2:
-    tong_so_viec = len(df_lich)
-    if tong_so_viec <= 10: font_size = "16px"; padding = "1rem"
-    elif tong_so_viec <= 20: font_size = "14px"; padding = "0.5rem"
-    else: font_size = "12px"; padding = "0.2rem"
-
-    st.markdown(f"""<style>div[data-testid="stDataFrame"] {{ font-size: {font_size} !important; }} td {{ padding-top: {padding} !important; padding-bottom: {padding} !important; line-height: 1.2 !important; }}</style>""", unsafe_allow_html=True)
-
-    def chinh_sua_gio(val): return str(val).replace("nan","")
-    if "Thời Gian" in df_lich.columns: df_lich["Thời Gian"] = df_lich["Thời Gian"].apply(chinh_sua_gio)
-    df_lich = df_lich.fillna("")
-
-    st.info("💡 Lưu ý: Cập nhật Trực chỉ huy trong Google Sheet.")
+    col_tro_ly = "Tên Trợ Lý" if "Tên Trợ Lý" in df.columns else df.columns[0]
     
-    if not df_lich.empty:
-        cac_ngay = df_lich["Thứ Ngày"].unique()
-        for ngay in cac_ngay:
-            cong_viec_ngay = df_lich[df_lich["Thứ Ngày"] == ngay]
-            with st.container():
-                st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
-                st.dataframe(
-                    cong_viec_ngay,
-                    use_container_width=True, hide_index=True,
-                    column_config={
-                        "Trực Ban": st.column_config.TextColumn("Trực Ban", width="small"),
-                        "Thời Gian": st.column_config.TextColumn("Giờ", width="small"),
-                        "Nội Dung": st.column_config.TextColumn("Nội Dung", width="medium"),
-                        "TTHV": st.column_config.TextColumn("TTHV", width="small"),
-                        "TT Phòng": st.column_config.TextColumn("TT Phòng", width="small"),
-                        "Chỉ huy Ban": st.column_config.TextColumn("CH Ban", width="small"),
-                        "Lực lượng tham gia": st.column_config.TextColumn("LL Tham Gia", width="small"),
-                        "Lực lượng phối hợp": st.column_config.TextColumn("LL Phối Hợp", width="small"),
-                        "Địa Điểm": st.column_config.TextColumn("Đ.Điểm", width="small"),
-                    }
-                )
+    with col_f1:
+        selected_tro_ly = st.multiselect("Nhân sự:", df[col_tro_ly].unique(), default=df[col_tro_ly].unique())
+    
+    if "Trạng Thái" in df.columns:
+        with col_f2:
+            selected_trang_thai = st.multiselect("Trạng thái:", df["Trạng Thái"].unique(), default=df["Trạng Thái"].unique())
+        # Lọc
+        df_display = df[df[col_tro_ly].isin(selected_tro_ly) & df["Trạng Thái"].isin(selected_trang_thai)].copy()
     else:
-        st.info("Chưa có dữ liệu lịch tuần.")
+        df_display = df[df[col_tro_ly].isin(selected_tro_ly)].copy()
+
+    # --- LOGIC XỬ LÝ (GIỮ NGUYÊN) ---
+    st.subheader("📋 Danh sách công việc")
+
+    if "Trạng Thái" in df_display.columns:
+        def xu_ly_row(row):
+            tt = str(row["Trạng Thái"])
+            hc = row.get("Hạn Chót", pd.NaT)
+            now = datetime.now()
+            
+            # Logic cũ của bạn
+            sort = 2
+            if 'Hoàn' in tt: sort = 1
+            elif pd.notna(hc) and hc < now:
+                tre = (now - hc).days
+                if tre > 0: 
+                    tt = f"{tt} (Trễ {tre} ngày)"
+                    sort = 3
+            elif 'Chậm' in tt: sort = 3
+            return tt, sort
+
+        df_display[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_display.apply(lambda x: pd.Series(xu_ly_row(x)), axis=1)
+        df_display["Trạng Thái"] = df_display["Trạng Thái Hiển Thị"]
+        
+        # Sắp xếp
+        cols_sort = ["Sort_Order"]
+        if "Hạn Chót" in df_display.columns: cols_sort.append("Hạn Chót")
+        df_display = df_display.sort_values(by=cols_sort)
+
+        # Cấu hình cột hiển thị (CỐ ĐỊNH CỘT CHỈ ĐẠO)
+        cols_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Chỉ Đạo", "Trạng Thái", "Tiến Độ (%)", "Hạn Chót"]
+        # Chỉ lấy cột nào CÓ THẬT trong dữ liệu
+        final_cols = [c for c in cols_show if c in df_display.columns]
+
+        def to_mau(row):
+            s = row.get("Sort_Order", 2)
+            if s == 1: return ['background-color: #28a745; color: white'] * len(row)
+            if s == 3: return ['background-color: #ff4b4b; color: white'] * len(row)
+            return ['background-color: #ffa421; color: black'] * len(row)
+
+        st.dataframe(
+            df_display[final_cols].style.apply(to_mau, axis=1),
+            use_container_width=True, height=600,
+            column_config={
+                "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
+                "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium") # Cố định cột này
+            }
+        )
+    else:
+        st.error("Không tìm thấy cột 'Trạng Thái'. Vui lòng kiểm tra file Excel.")
+
+with tab2:
+    if df_lich is not None:
+        st.dataframe(df_lich, use_container_width=True)
