@@ -5,8 +5,8 @@ from datetime import datetime
 # ==============================================================================
 # 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN DÁN LINK CSV CỦA BẠN VÀO ĐÂY)
 # ==============================================================================
-LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
-LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=959725079&single=true&output=csv"
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pubhtml?gid=2034795073&single=true"
+LINK_CSV_LICH_TUAN = "Dhttps://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pubhtml?gid=959725079&single=true"
 
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN
@@ -19,6 +19,9 @@ st.markdown("""
     h1 { text-align: center; color: #4da6ff; }
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
+    /* Ẩn index của bảng nếu cần */
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
 </style>
 """, unsafe_allow_html=True)
 
@@ -112,30 +115,22 @@ with tab1:
                 }
             )
 
-        # --- DANH SÁCH CHI TIẾT (ĐÃ SỬA LỖI MÀU SẮC) ---
+        # --- DANH SÁCH CHI TIẾT (AUTO HEIGHT - CHIỀU CAO TỰ ĐỘNG) ---
         st.subheader("📋 Danh sách công việc chi tiết")
         
         if "Trạng Thái" in df_loc.columns:
-            # 1. TÍNH TOÁN
+            # 1. TÍNH TOÁN LOGIC
             def xu_ly_row(row):
                 tt = str(row["Trạng Thái"])
                 hc = row.get("Hạn Chót", pd.NaT)
-                
-                sort = 2 # Mặc định: Vàng (Đang làm)
-                
-                # Ưu tiên 1: Hoàn thành (Xanh)
-                if 'Hoàn' in tt: 
-                    sort = 1 
-                
-                # Ưu tiên 3: Quá hạn / Chậm (Đỏ)
+                sort = 2
+                if 'Hoàn' in tt: sort = 1 
                 elif pd.notna(hc) and hc < now:
                     tre = (now - hc).days
                     if tre > 0: 
                         tt = f"{tt} (Trễ {tre} ngày)"
                         sort = 3 
-                elif 'Chậm' in tt or 'Trễ' in tt: 
-                    sort = 3
-                
+                elif 'Chậm' in tt or 'Trễ' in tt: sort = 3
                 return tt, sort
 
             df_loc[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_loc.apply(lambda x: pd.Series(xu_ly_row(x)), axis=1)
@@ -146,29 +141,34 @@ with tab1:
             if "Hạn Chót" in df_loc.columns: cols_sort.append("Hạn Chót")
             df_display = df_loc.sort_values(by=cols_sort)
 
-            # 3. CHUẨN BỊ CỘT ĐỂ HIỂN THỊ
-            # Lưu ý: PHẢI đưa cột Sort_Order vào đây thì hàm tô màu mới đọc được
             cols_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Chỉ Đạo", "Trạng Thái", "Tiến Độ (%)", "Hạn Chót", "Sort_Order"]
             final_cols = [c for c in cols_show if c in df_display.columns]
 
-            # 4. HÀM TÔ MÀU (Đã test kỹ)
             def to_mau(row):
-                # Lấy giá trị Sort_Order của dòng hiện tại
                 s = row.get("Sort_Order", 2)
-                
-                if s == 1: return ['background-color: #28a745; color: white'] * len(row) # Xanh lá
-                if s == 3: return ['background-color: #ff4b4b; color: white'] * len(row) # Đỏ
-                return ['background-color: #ffa421; color: black'] * len(row) # Vàng cam
+                if s == 1: return ['background-color: #28a745; color: white'] * len(row)
+                if s == 3: return ['background-color: #ff4b4b; color: white'] * len(row)
+                return ['background-color: #ffa421; color: black'] * len(row)
 
-            # 5. HIỂN THỊ VÀ ẨN CỘT SORT_ORDER
+            # 3. TÍNH TOÁN CHIỀU CAO TỰ ĐỘNG (CÔNG THỨC MỚI)
+            # 35px là chiều cao trung bình 1 dòng + 3px viền
+            # Cộng thêm 38px cho dòng tiêu đề
+            so_dong = len(df_display)
+            chieu_cao_tu_dong = (so_dong + 1) * 35 + 3
+            
+            # Đặt giới hạn tối thiểu 150px để nhìn cho đẹp nếu ít việc
+            if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
+
+            # 4. HIỂN THỊ VỚI HEIGHT = chieu_cao_tu_dong
             st.dataframe(
                 df_display[final_cols].style.apply(to_mau, axis=1),
-                use_container_width=True, height=600,
+                use_container_width=True,
+                height=chieu_cao_tu_dong, # <--- ĐÂY LÀ CHỖ THAY ĐỔI CHIỀU CAO
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
                     "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium"),
                     "Tiến Độ (%)": st.column_config.NumberColumn("Tiến Độ", format="%.0f%%"),
-                    "Sort_Order": None, # <--- BÍ KÍP: Ẩn cột này đi để bảng đẹp
+                    "Sort_Order": None,
                 }
             )
 
@@ -193,8 +193,16 @@ with tab2:
             cong_viec_ngay = df_lich[df_lich["Thứ Ngày"] == ngay]
             with st.container():
                 st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; color: black; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
+                
+                # Tính chiều cao cho bảng lịch tuần luôn
+                so_dong_lich = len(cong_viec_ngay)
+                h_lich = (so_dong_lich + 1) * 35 + 3
+                
                 st.dataframe(
-                    cong_viec_ngay, use_container_width=True, hide_index=True,
+                    cong_viec_ngay, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    height=h_lich, # Tự động cao theo nội dung
                     column_config={"Nội Dung": st.column_config.TextColumn("Nội Dung", width="large")}
                 )
     else:
