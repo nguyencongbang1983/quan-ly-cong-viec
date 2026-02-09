@@ -10,26 +10,50 @@ LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kM
 LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=959725079&single=true&output=csv"
 
 # ==============================================================================
-# CẤU HÌNH GIAO DIỆN
+# CẤU HÌNH GIAO DIỆN & CSS ĐẶC BIỆT
 # ==============================================================================
 st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
 
+# --- CSS GHIM KHẨU HIỆU & TÙY CHỈNH ---
 st.markdown("""
 <style>
+    /* 1. Tùy chỉnh bảng dữ liệu */
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
     h1 { text-align: center; color: #4da6ff; }
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
-    /* Ẩn cột index */
     thead tr th:first-child {display:none}
     tbody th {display:none}
+
+    /* 2. Đẩy nội dung chính xuống để không bị khẩu hiệu che mất */
+    .block-container {
+        padding-top: 5rem !important; /* Đẩy xuống 5rem */
+    }
+    
+    /* 3. Ẩn Header mặc định của Streamlit (nếu muốn nó sạch hơn) */
+    header {visibility: hidden;}
+
+    /* 4. TẠO THANH KHẨU HIỆU GHIM TRÊN CÙNG (STICKY HEADER) */
+    .sticky-marquee {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background-color: #fff3cd; /* Màu nền vàng nhạt */
+        color: #856404;            /* Màu chữ vàng đậm */
+        z-index: 999999;           /* Luôn nổi lên trên cùng */
+        border-bottom: 3px solid #ffcc00;
+        padding: 10px 0;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        font-size: 18px;
+        text-transform: uppercase;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
-
 # ==============================================================================
-# ✨ KHẨU HIỆU CỔ ĐỘNG
+# ✨ KHẨU HIỆU CỔ ĐỘNG (CHẠY NGẪU NHIÊN)
 # ==============================================================================
 danh_sach_khau_hieu = [
     "🚀 Việc hôm nay chớ để ngày mai - Hành động ngay!",
@@ -48,13 +72,16 @@ try:
 except:
     cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
+# Đưa nội dung vào class 'sticky-marquee' đã định nghĩa CSS ở trên
 st.markdown(f"""
-<div style="background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
-    <marquee style="color: #856404; font-weight: bold; font-size: 32px; font-family: Arial;" scrollamount="8">
-        📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay}
+<div class="sticky-marquee">
+    <marquee scrollamount="10">
+        📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay} &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!
     </marquee>
 </div>
 """, unsafe_allow_html=True)
+
+st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
 # ==============================================================================
 # HÀM ĐỌC DỮ LIỆU
@@ -83,7 +110,7 @@ for col in df_congviec.columns:
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD QUẢN LÝ
+# TAB 1: DASHBOARD
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Công Tác Tuần"])
 
@@ -109,7 +136,7 @@ with tab1:
         else:
             df_loc = df[df[col_tro_ly].isin(selected_tro_ly)].copy()
 
-    # --- KPI THỐNG KÊ (Tính trên toàn bộ dữ liệu lọc, kể cả việc đã xong) ---
+    # --- KPI ---
     if not df_loc.empty:
         c1, c2, c3, c4 = st.columns(4)
         now = datetime.now()
@@ -143,85 +170,56 @@ with tab1:
                 }
             )
 
-        # --- DANH SÁCH CHI TIẾT (XỬ LÝ MỚI) ---
+        # --- DANH SÁCH CHI TIẾT ---
         st.subheader("📋 Danh sách công việc chi tiết")
-
-        # 1. TÙY CHỌN ẨN/HIỆN VIỆC ĐÃ XONG
         hien_thi_xong = st.checkbox("✅ Hiển thị cả công việc đã Hoàn thành", value=False)
         
         if "Trạng Thái" in df_loc.columns:
-            # Copy dữ liệu để xử lý hiển thị
             df_display = df_loc.copy()
-
-            # 2. TÍNH TOÁN LOGIC MÀU SẮC & CẢNH BÁO
             def xu_ly_row(row):
                 tt = str(row["Trạng Thái"])
                 hc = row.get("Hạn Chót", pd.NaT)
-                
-                sort = 2 # Mặc định: Vàng (Bình thường)
-                
-                # Ưu tiên 1: Hoàn thành (Xanh)
-                if 'Hoàn' in tt: 
-                    sort = 1 
-                
-                # Logic xử lý hạn chót
+                sort = 2
+                if 'Hoàn' in tt: sort = 1 
                 elif pd.notna(hc):
                     so_ngay_con_lai = (hc - now).days
-                    
-                    # Ưu tiên 4: Quá hạn (Đỏ)
                     if hc < now:
                         tre = (now - hc).days
                         tt = f"{tt} (Trễ {tre} ngày)"
                         sort = 4
-                    
-                    # Ưu tiên 3: CÒN 3 NGÀY (Cam Đậm - Gấp)
                     elif 0 <= so_ngay_con_lai <= 3:
                         tt = f"{tt} (🔥 Gấp: Còn {so_ngay_con_lai} ngày)"
                         sort = 3
-                        
-                elif 'Chậm' in tt or 'Trễ' in tt: 
-                    sort = 4 # Đỏ
-
+                elif 'Chậm' in tt: sort = 4
                 return tt, sort
 
             df_display[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_display.apply(lambda x: pd.Series(xu_ly_row(x)), axis=1)
             df_display["Trạng Thái"] = df_display["Trạng Thái Hiển Thị"]
             
-            # 3. LỌC ẨN VIỆC ĐÃ XONG (NẾU KHÔNG TÍCH CHECKBOX)
             if not hien_thi_xong:
-                # Chỉ lấy những việc Sort_Order khác 1 (1 là Hoàn thành)
                 df_display = df_display[df_display['Sort_Order'] != 1]
 
-            # 4. SẮP XẾP: Gấp (3) -> Quá hạn (4) -> Đang làm (2) -> Xong (1)
-            # Hoặc Quá hạn -> Gấp -> Đang làm -> Xong (tùy bạn chọn, ở đây tôi để Quá hạn lên đầu cho sợ)
-            # Order: 4 (Đỏ), 3 (Cam), 2 (Vàng), 1 (Xanh)
             cols_sort = ["Sort_Order"]
             if "Hạn Chót" in df_display.columns: cols_sort.append("Hạn Chót")
-            df_display = df_display.sort_values(by=cols_sort, ascending=[False, True]) # False để đưa số to (4,3) lên đầu
+            df_display = df_display.sort_values(by=cols_sort, ascending=[False, True])
 
             cols_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Chỉ Đạo", "Trạng Thái", "Tiến Độ (%)", "Hạn Chót", "Sort_Order"]
             final_cols = [c for c in cols_show if c in df_display.columns]
 
-            # 5. TÔ MÀU (THÊM MÀU CAM CHO VIỆC GẤP)
             def to_mau(row):
                 s = row.get("Sort_Order", 2)
-                if s == 1: return ['background-color: #28a745; color: white'] * len(row) # Xanh (Xong)
-                if s == 4: return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row) # Đỏ (Quá hạn)
-                if s == 3: return ['background-color: #ff8c00; color: white; font-weight: bold'] * len(row) # Cam Đậm (Gấp <=3 ngày)
-                return ['background-color: #ffd700; color: black'] * len(row) # Vàng (Bình thường)
+                if s == 1: return ['background-color: #28a745; color: white'] * len(row)
+                if s == 4: return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row)
+                if s == 3: return ['background-color: #ff8c00; color: white; font-weight: bold'] * len(row)
+                return ['background-color: #ffd700; color: black'] * len(row)
 
-            # 6. TÍNH CHIỀU CAO TỰ ĐỘNG
             so_dong = len(df_display)
-            if so_dong > 0:
-                chieu_cao_tu_dong = (so_dong + 1) * 35 + 3
-                if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
-            else:
-                chieu_cao_tu_dong = 150 # Chiều cao tối thiểu nếu không có việc
+            chieu_cao_tu_dong = (so_dong + 1) * 35 + 3 if so_dong > 0 else 150
+            if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
 
             st.dataframe(
                 df_display[final_cols].style.apply(to_mau, axis=1),
-                use_container_width=True,
-                height=chieu_cao_tu_dong,
+                use_container_width=True, height=chieu_cao_tu_dong,
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
                     "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium"),
@@ -254,7 +252,6 @@ with tab2:
                 
                 so_dong_lich = len(cong_viec_ngay)
                 h_lich = (so_dong_lich + 1) * 35 + 3
-                
                 st.dataframe(
                     cong_viec_ngay, use_container_width=True, hide_index=True, height=h_lich,
                     column_config={"Nội Dung": st.column_config.TextColumn("Nội Dung", width="large")}
