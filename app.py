@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random
 from datetime import datetime
 
 # ==============================================================================
@@ -11,7 +12,6 @@ LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kM
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN
 # ==============================================================================
-
 st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
 
 st.markdown("""
@@ -20,7 +20,7 @@ st.markdown("""
     h1 { text-align: center; color: #4da6ff; }
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
-    /* Ẩn index của bảng */
+    /* Ẩn cột index (số thứ tự dòng) để bảng đẹp hơn */
     thead tr th:first-child {display:none}
     tbody th {display:none}
 </style>
@@ -29,9 +29,9 @@ st.markdown("""
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
 # ==============================================================================
-# ✨ TÍNH NĂNG MỚI: KHẨU HIỆU CỔ ĐỘNG (CHỮ CHẠY)
+# ✨ TÍNH NĂNG: KHẨU HIỆU CỔ ĐỘNG (CHẠY NGẪU NHIÊN)
 # ==============================================================================
-# Danh sách các câu khẩu hiệu (Bạn có thể thêm sửa tùy ý tại đây)
+# Danh sách câu nói hay (Bạn có thể sửa hoặc thêm mới vào đây)
 danh_sach_khau_hieu = [
     "🚀 Việc hôm nay chớ để ngày mai - Hành động ngay!",
     "💪 Thái độ quyết định trình độ - Hãy làm việc bằng cả trái tim!",
@@ -39,18 +39,21 @@ danh_sach_khau_hieu = [
     "⭐ Đừng làm việc chăm chỉ, hãy làm việc thông minh!",
     "🤝 Đoàn kết là sức mạnh vô địch - Cùng nhau chúng ta sẽ thành công!",
     "🎯 Tập trung vào giải pháp, đừng tập trung vào vấn đề!",
-    "clock Thời gian là vàng bạc - Hãy trân trọng từng phút giây!",
+    "⏰ Thời gian là vàng bạc - Hãy trân trọng từng phút giây!",
     "✨ Mỗi ngày làm tốt một việc nhỏ sẽ tạo nên thành công lớn!",
     "🏆 Kỷ luật là cầu nối giữa mục tiêu và thành tựu!"
 ]
 
-# Chọn ngẫu nhiên 1 câu
-cau_hom_nay = random.choice(danh_sach_khau_hieu)
+# Chọn ngẫu nhiên 1 câu (Cần thư viện random ở đầu file)
+try:
+    cau_hom_nay = random.choice(danh_sach_khau_hieu)
+except:
+    cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
 # Hiển thị chữ chạy (Marquee)
 st.markdown(f"""
 <div style="background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
-    <marquee style="color: #856404; font-weight: bold; font-size: 18px; font-family: Arial;" scrollamount="10">
+    <marquee style="color: #856404; font-weight: bold; font-size: 18px; font-family: Arial;" scrollamount="8">
         📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay}
     </marquee>
 </div>
@@ -59,11 +62,13 @@ st.markdown(f"""
 # ==============================================================================
 # HÀM ĐỌC DỮ LIỆU
 # ==============================================================================
+# Nút cập nhật thủ công
 if st.button("🔄 Cập nhật dữ liệu mới nhất"):
     st.cache_data.clear()
 
 def load_data_force(link):
     try:
+        # Thêm mã ngẫu nhiên để ép Google cập nhật dữ liệu mới
         if "?" in link: link_new = f"{link}&t={datetime.now().timestamp()}"
         else: link_new = f"{link}?t={datetime.now().timestamp()}"
         return pd.read_csv(link_new)
@@ -72,18 +77,19 @@ def load_data_force(link):
 df_congviec = load_data_force(LINK_CSV_CONG_VIEC)
 df_lich = load_data_force(LINK_CSV_LICH_TUAN)
 
+# Kiểm tra dữ liệu
 if df_congviec is None:
-    st.error("⚠️ Chưa đọc được dữ liệu. Kiểm tra Link CSV.")
+    st.error("⚠️ Chưa đọc được dữ liệu. Vui lòng kiểm tra lại Link CSV trong file code.")
     st.stop()
 
-# --- XỬ LÝ TÊN CỘT ---
+# --- XỬ LÝ TÊN CỘT (QUAN TRỌNG) ---
 df_congviec.columns = df_congviec.columns.str.strip()
 for col in df_congviec.columns:
     if "Chỉ" in col and "Đạo" in col: df_congviec.rename(columns={col: "Chỉ Đạo"}, inplace=True)
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD
+# TAB 1: DASHBOARD QUẢN LÝ
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Công Tác Tuần"])
 
@@ -109,7 +115,7 @@ with tab1:
         else:
             df_loc = df[df[col_tro_ly].isin(selected_tro_ly)].copy()
 
-    # --- KPI ---
+    # --- KPI THỐNG KÊ ---
     if not df_loc.empty:
         c1, c2, c3, c4 = st.columns(4)
         now = datetime.now()
@@ -143,7 +149,7 @@ with tab1:
                 }
             )
 
-        # --- DANH SÁCH CHI TIẾT (AUTO HEIGHT) ---
+        # --- DANH SÁCH CHI TIẾT (AUTO HEIGHT & TRÀN VIỀN) ---
         st.subheader("📋 Danh sách công việc chi tiết")
         
         if "Trạng Thái" in df_loc.columns:
@@ -185,12 +191,12 @@ with tab1:
             st.dataframe(
                 df_display[final_cols].style.apply(to_mau, axis=1),
                 use_container_width=True,
-                height=chieu_cao_tu_dong,
+                height=chieu_cao_tu_dong, # Tự động giãn chiều cao
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
                     "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium"),
                     "Tiến Độ (%)": st.column_config.NumberColumn("Tiến Độ", format="%.0f%%"),
-                    "Sort_Order": None,
+                    "Sort_Order": None, # Ẩn cột sắp xếp
                 }
             )
 
