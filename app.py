@@ -50,7 +50,7 @@ except:
 
 st.markdown(f"""
 <div style="background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
-    <marquee style="color: #856404; font-weight: bold; font-size: 18px; font-family: Arial;" scrollamount="8">
+    <marquee style="color: #856404; font-weight: bold; font-size: 32px; font-family: Arial;" scrollamount="8">
         📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay}
     </marquee>
 </div>
