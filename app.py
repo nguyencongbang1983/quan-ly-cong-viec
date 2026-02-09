@@ -11,6 +11,7 @@ LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kM
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN
 # ==============================================================================
+
 st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
 
 st.markdown("""
@@ -19,7 +20,7 @@ st.markdown("""
     h1 { text-align: center; color: #4da6ff; }
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 0.5rem; padding-right: 0.5rem; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
-    /* Ẩn index của bảng nếu cần */
+    /* Ẩn index của bảng */
     thead tr th:first-child {display:none}
     tbody th {display:none}
 </style>
@@ -27,13 +28,40 @@ st.markdown("""
 
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
-# Nút cập nhật thủ công
-if st.button("🔄 Cập nhật dữ liệu mới nhất"):
-    st.cache_data.clear()
+# ==============================================================================
+# ✨ TÍNH NĂNG MỚI: KHẨU HIỆU CỔ ĐỘNG (CHỮ CHẠY)
+# ==============================================================================
+# Danh sách các câu khẩu hiệu (Bạn có thể thêm sửa tùy ý tại đây)
+danh_sach_khau_hieu = [
+    "🚀 Việc hôm nay chớ để ngày mai - Hành động ngay!",
+    "💪 Thái độ quyết định trình độ - Hãy làm việc bằng cả trái tim!",
+    "🔥 Chủ động - Sáng tạo - Hiệu quả - Kỷ luật là sức mạnh!",
+    "⭐ Đừng làm việc chăm chỉ, hãy làm việc thông minh!",
+    "🤝 Đoàn kết là sức mạnh vô địch - Cùng nhau chúng ta sẽ thành công!",
+    "🎯 Tập trung vào giải pháp, đừng tập trung vào vấn đề!",
+    "clock Thời gian là vàng bạc - Hãy trân trọng từng phút giây!",
+    "✨ Mỗi ngày làm tốt một việc nhỏ sẽ tạo nên thành công lớn!",
+    "🏆 Kỷ luật là cầu nối giữa mục tiêu và thành tựu!"
+]
+
+# Chọn ngẫu nhiên 1 câu
+cau_hom_nay = random.choice(danh_sach_khau_hieu)
+
+# Hiển thị chữ chạy (Marquee)
+st.markdown(f"""
+<div style="background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
+    <marquee style="color: #856404; font-weight: bold; font-size: 18px; font-family: Arial;" scrollamount="10">
+        📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay}
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
 
 # ==============================================================================
 # HÀM ĐỌC DỮ LIỆU
 # ==============================================================================
+if st.button("🔄 Cập nhật dữ liệu mới nhất"):
+    st.cache_data.clear()
+
 def load_data_force(link):
     try:
         if "?" in link: link_new = f"{link}&t={datetime.now().timestamp()}"
@@ -115,7 +143,7 @@ with tab1:
                 }
             )
 
-        # --- DANH SÁCH CHI TIẾT (AUTO HEIGHT - CHIỀU CAO TỰ ĐỘNG) ---
+        # --- DANH SÁCH CHI TIẾT (AUTO HEIGHT) ---
         st.subheader("📋 Danh sách công việc chi tiết")
         
         if "Trạng Thái" in df_loc.columns:
@@ -136,7 +164,6 @@ with tab1:
             df_loc[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_loc.apply(lambda x: pd.Series(xu_ly_row(x)), axis=1)
             df_loc["Trạng Thái"] = df_loc["Trạng Thái Hiển Thị"]
             
-            # 2. SẮP XẾP
             cols_sort = ["Sort_Order"]
             if "Hạn Chót" in df_loc.columns: cols_sort.append("Hạn Chót")
             df_display = df_loc.sort_values(by=cols_sort)
@@ -150,20 +177,15 @@ with tab1:
                 if s == 3: return ['background-color: #ff4b4b; color: white'] * len(row)
                 return ['background-color: #ffa421; color: black'] * len(row)
 
-            # 3. TÍNH TOÁN CHIỀU CAO TỰ ĐỘNG (CÔNG THỨC MỚI)
-            # 35px là chiều cao trung bình 1 dòng + 3px viền
-            # Cộng thêm 38px cho dòng tiêu đề
+            # TÍNH CHIỀU CAO TỰ ĐỘNG
             so_dong = len(df_display)
             chieu_cao_tu_dong = (so_dong + 1) * 35 + 3
-            
-            # Đặt giới hạn tối thiểu 150px để nhìn cho đẹp nếu ít việc
             if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
 
-            # 4. HIỂN THỊ VỚI HEIGHT = chieu_cao_tu_dong
             st.dataframe(
                 df_display[final_cols].style.apply(to_mau, axis=1),
                 use_container_width=True,
-                height=chieu_cao_tu_dong, # <--- ĐÂY LÀ CHỖ THAY ĐỔI CHIỀU CAO
+                height=chieu_cao_tu_dong,
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
                     "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium"),
@@ -194,15 +216,11 @@ with tab2:
             with st.container():
                 st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; color: black; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
                 
-                # Tính chiều cao cho bảng lịch tuần luôn
                 so_dong_lich = len(cong_viec_ngay)
                 h_lich = (so_dong_lich + 1) * 35 + 3
                 
                 st.dataframe(
-                    cong_viec_ngay, 
-                    use_container_width=True, 
-                    hide_index=True,
-                    height=h_lich, # Tự động cao theo nội dung
+                    cong_viec_ngay, use_container_width=True, hide_index=True, height=h_lich,
                     column_config={"Nội Dung": st.column_config.TextColumn("Nội Dung", width="large")}
                 )
     else:
