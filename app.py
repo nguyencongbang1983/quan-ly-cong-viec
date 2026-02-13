@@ -8,7 +8,7 @@ from datetime import datetime
 # ==============================================================================
 
 # 1. Link CSV Công Việc (ĐÃ ĐIỀN SẴN LINK CỦA BẠN)
-LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WkjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSwwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 
 # 2. Link Google Calendar 
 # (BẠN HÃY DÁN LINK LỊCH CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP DƯỚI ĐÂY)
