@@ -7,12 +7,12 @@ from datetime import datetime
 # 🔴 CẤU HÌNH DỮ LIỆU (QUAN TRỌNG NHẤT)
 # ==============================================================================
 
-# 1. Dán Link CSV Công Việc của bạn vào đây (Link cũ của bạn)
+# 1. Link CSV Công Việc (ĐÃ ĐIỀN SẴN LINK CỦA BẠN)
 LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WkjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSwwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 
-# 2. Dán Link Google Calendar "sạch" vào đây
-# (Ví dụ mẫu bên dưới là lịch nghỉ lễ, hãy thay bằng link lịch cơ quan của bạn)
-LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
+# 2. Link Google Calendar 
+# (BẠN HÃY DÁN LINK LỊCH CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP DƯỚI ĐÂY)
+LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
 
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN & CSS (TRÀN VIỀN + GHIM KHẨU HIỆU)
