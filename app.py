@@ -12,7 +12,7 @@ LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kM
 
 # 2. Dán Link Google Calendar "sạch" vào đây
 # (Ví dụ mẫu bên dưới là lịch nghỉ lễ, hãy thay bằng link lịch cơ quan của bạn)
-LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=vietnamese%23holiday%40group.v.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
+LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
 
 # ==============================================================================
 # CẤU HÌNH GIAO DIỆN & CSS (TRÀN VIỀN + GHIM KHẨU HIỆU)
