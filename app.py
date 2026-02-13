@@ -1,59 +1,77 @@
 import streamlit as st
 import pandas as pd
 import random
+import streamlit.components.v1 as components # Thư viện để nhúng Calendar
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH LINK DỮ LIỆU (BẠN DÁN LINK CSV CỦA BẠN VÀO ĐÂY)
+# 🔴 CẤU HÌNH DỮ LIỆU (BẠN HÃY DÁN LINK CỦA BẠN VÀO ĐÂY)
 # ==============================================================================
+
+# 1. Link CSV Công Việc (Từ Google Sheet cũ)
 LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
-LINK_CSV_LICH_TUAN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=959725079&single=true&output=csv"
+
+# 2. Link Google Calendar (Lấy từ bước "Tích hợp lịch" -> src="...")
+LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
+# Ví dụ: "https://calendar.google.com/calendar/embed?src=vietnamese%23holiday%40group.v.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
 
 # ==============================================================================
-# CẤU HÌNH GIAO DIỆN & CSS ĐẶC BIỆT
+# CẤU HÌNH GIAO DIỆN & CSS ĐẶC BIỆT (KHÓA GIAO DIỆN)
 # ==============================================================================
 st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
 
-# --- CSS GHIM KHẨU HIỆU & TÙY CHỈNH ---
+# --- CSS CAO CẤP: GHIM KHẨU HIỆU & KHÓA FULLSCREEN & TRÀN VIỀN ---
 st.markdown("""
 <style>
-    /* 1. Tùy chỉnh bảng dữ liệu */
+    /* 1. Mở rộng giao diện ra sát lề (Full Width 100%) */
+    .block-container {
+        padding-top: 5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+    
+    /* 2. ẨN NÚT TOÀN MÀN HÌNH CỦA BẢNG */
+    [data-testid="stDataFrame"] button[title="View fullscreen"] {
+        display: none !important;
+    }
+    
+    /* 3. Tùy chỉnh giao diện bảng */
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
     h1 { text-align: center; color: #4da6ff; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
     thead tr th:first-child {display:none}
     tbody th {display:none}
 
-    /* 2. Đẩy nội dung chính xuống để không bị khẩu hiệu che mất */
-    .block-container {
-        padding-top: 5rem !important; /* Đẩy xuống 5rem */
-    }
-    
-    /* 3. Ẩn Header mặc định của Streamlit (nếu muốn nó sạch hơn) */
+    /* 4. Ẩn Header/Footer mặc định */
     header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display:none;}
 
-    /* 4. TẠO THANH KHẨU HIỆU GHIM TRÊN CÙNG (STICKY HEADER) */
+    /* 5. KHẨU HIỆU "BẤT TỬ" */
     .sticky-marquee {
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        background-color: #fff3cd; /* Màu nền vàng nhạt */
-        color: #856404;            /* Màu chữ vàng đậm */
-        z-index: 999999;           /* Luôn nổi lên trên cùng */
+        width: 100vw;
+        background-color: #fff3cd;
+        color: #856404;
+        z-index: 2147483647;
         border-bottom: 3px solid #ffcc00;
         padding: 10px 0;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
         font-family: Arial, sans-serif;
         font-weight: bold;
-        font-size: 18px;
+        font-size: 20px;
         text-transform: uppercase;
+        display: flex;
+        align-items: center;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# ✨ KHẨU HIỆU CỔ ĐỘNG (CHẠY NGẪU NHIÊN)
+# ✨ KHẨU HIỆU CỔ ĐỘNG
 # ==============================================================================
 danh_sach_khau_hieu = [
     "🚀 Việc hôm nay chớ để ngày mai - Hành động ngay!",
@@ -72,11 +90,10 @@ try:
 except:
     cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
-# Đưa nội dung vào class 'sticky-marquee' đã định nghĩa CSS ở trên
 st.markdown(f"""
 <div class="sticky-marquee">
-    <marquee scrollamount="10">
-        📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay} &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!
+    <marquee scrollamount="12">
+        📢 THÔNG ĐIỆP HÔM NAY: {cau_hom_nay} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!
     </marquee>
 </div>
 """, unsafe_allow_html=True)
@@ -84,7 +101,7 @@ st.markdown(f"""
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
 # ==============================================================================
-# HÀM ĐỌC DỮ LIỆU
+# HÀM ĐỌC DỮ LIỆU CÔNG VIỆC (Tab 1)
 # ==============================================================================
 if st.button("🔄 Cập nhật dữ liệu mới nhất"):
     st.cache_data.clear()
@@ -97,10 +114,11 @@ def load_data_force(link):
     except: return None
 
 df_congviec = load_data_force(LINK_CSV_CONG_VIEC)
-df_lich = load_data_force(LINK_CSV_LICH_TUAN)
+
+# Lưu ý: Không cần tải df_lich nữa vì dùng Google Calendar rồi
 
 if df_congviec is None:
-    st.error("⚠️ Chưa đọc được dữ liệu. Vui lòng kiểm tra lại Link CSV.")
+    st.error("⚠️ Chưa đọc được dữ liệu Công Việc. Vui lòng kiểm tra lại Link CSV.")
     st.stop()
 
 # --- XỬ LÝ TÊN CỘT ---
@@ -110,9 +128,9 @@ for col in df_congviec.columns:
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD
+# TAB 1: DASHBOARD QUẢN LÝ
 # ==============================================================================
-tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Công Tác Tuần"])
+tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch Google Calendar"])
 
 with tab1:
     df = df_congviec.copy()
@@ -213,13 +231,18 @@ with tab1:
                 if s == 3: return ['background-color: #ff8c00; color: white; font-weight: bold'] * len(row)
                 return ['background-color: #ffd700; color: black'] * len(row)
 
+            # TÍNH CHIỀU CAO TỰ ĐỘNG
             so_dong = len(df_display)
-            chieu_cao_tu_dong = (so_dong + 1) * 35 + 3 if so_dong > 0 else 150
-            if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
+            if so_dong > 0:
+                chieu_cao_tu_dong = (so_dong + 1) * 35 + 3
+                if chieu_cao_tu_dong < 150: chieu_cao_tu_dong = 150
+            else:
+                chieu_cao_tu_dong = 150
 
             st.dataframe(
                 df_display[final_cols].style.apply(to_mau, axis=1),
-                use_container_width=True, height=chieu_cao_tu_dong,
+                use_container_width=True,
+                height=chieu_cao_tu_dong,
                 column_config={
                     "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
                     "Chỉ Đạo": st.column_config.TextColumn("👤 Chỉ Đạo", width="medium"),
@@ -229,32 +252,11 @@ with tab1:
             )
 
 # ==============================================================================
-# TAB 2: LỊCH TUẦN
+# TAB 2: LỊCH GOOGLE CALENDAR (MỚI)
 # ==============================================================================
 with tab2:
-    if df_lich is not None:
-        tong_so_viec = len(df_lich)
-        if tong_so_viec <= 10: font_size = "16px"; padding = "1rem"
-        elif tong_so_viec <= 20: font_size = "14px"; padding = "0.5rem"
-        else: font_size = "12px"; padding = "0.2rem"
-
-        st.markdown(f"""<style>div[data-testid="stDataFrame"] {{ font-size: {font_size} !important; }} td {{ padding-top: {padding} !important; padding-bottom: {padding} !important; line-height: 1.2 !important; }}</style>""", unsafe_allow_html=True)
-        
-        def sua_gio(val): return str(val).replace("nan","")
-        if "Thời Gian" in df_lich.columns: df_lich["Thời Gian"] = df_lich["Thời Gian"].apply(sua_gio)
-        df_lich = df_lich.fillna("")
-
-        cac_ngay = df_lich["Thứ Ngày"].unique()
-        for ngay in cac_ngay:
-            cong_viec_ngay = df_lich[df_lich["Thứ Ngày"] == ngay]
-            with st.container():
-                st.markdown(f"<div style='background-color: #ff9f1c; padding: 2px 10px; font-weight: bold; margin-top: 5px; color: black; font-size: {font_size};'>📅 {ngay}</div>", unsafe_allow_html=True)
-                
-                so_dong_lich = len(cong_viec_ngay)
-                h_lich = (so_dong_lich + 1) * 35 + 3
-                st.dataframe(
-                    cong_viec_ngay, use_container_width=True, hide_index=True, height=h_lich,
-                    column_config={"Nội Dung": st.column_config.TextColumn("Nội Dung", width="large")}
-                )
+    if "http" in LINK_GOOGLE_CALENDAR:
+        st.markdown(f'<iframe src="{LINK_GOOGLE_CALENDAR}" style="border: 0" width="100%" height="800" frameborder="0" scrolling="no"></iframe>', unsafe_allow_html=True)
     else:
-        st.info("Chưa có dữ liệu lịch tuần.")
+        st.info("⚠️ Vui lòng dán Link Google Calendar vào code (dòng 14).")
+        st.warning("Hướng dẫn: Vào Google Calendar -> Cài đặt -> Chọn lịch -> Tích hợp lịch -> Copy link trong thẻ 'src'.")
