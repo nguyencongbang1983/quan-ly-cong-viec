@@ -1,54 +1,52 @@
 import streamlit as st
 import pandas as pd
 import random
-import streamlit.components.v1 as components # Thư viện để nhúng Calendar
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH DỮ LIỆU (BẠN HÃY DÁN LINK CỦA BẠN VÀO ĐÂY)
+# 🔴 CẤU HÌNH DỮ LIỆU (QUAN TRỌNG NHẤT)
 # ==============================================================================
 
-# 1. Link CSV Công Việc (Từ Google Sheet cũ)
-LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
+# 1. Dán Link CSV Công Việc của bạn vào đây (Link cũ của bạn)
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WkjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSwwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 
-# 2. Link Google Calendar (Lấy từ bước "Tích hợp lịch" -> src="...")
-LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
-# Ví dụ: "https://calendar.google.com/calendar/embed?src=vietnamese%23holiday%40group.v.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
+# 2. Dán Link Google Calendar "sạch" vào đây
+# (Ví dụ mẫu bên dưới là lịch nghỉ lễ, hãy thay bằng link lịch cơ quan của bạn)
+LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=vietnamese%23holiday%40group.v.calendar.google.com&ctz=Asia%2FHo_Chi_Minh" 
 
 # ==============================================================================
-# CẤU HÌNH GIAO DIỆN & CSS ĐẶC BIỆT (KHÓA GIAO DIỆN)
+# CẤU HÌNH GIAO DIỆN & CSS (TRÀN VIỀN + GHIM KHẨU HIỆU)
 # ==============================================================================
 st.set_page_config(page_title="Hệ Thống Quản Lý", layout="wide", page_icon="🌐")
 
-# --- CSS CAO CẤP: GHIM KHẨU HIỆU & KHÓA FULLSCREEN & TRÀN VIỀN ---
 st.markdown("""
 <style>
     /* 1. Mở rộng giao diện ra sát lề (Full Width 100%) */
     .block-container {
-        padding-top: 5rem !important;
+        padding-top: 5rem !important; /* Chừa chỗ cho khẩu hiệu */
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         max-width: 100% !important;
     }
     
-    /* 2. ẨN NÚT TOÀN MÀN HÌNH CỦA BẢNG */
+    /* 2. ẨN NÚT TOÀN MÀN HÌNH CỦA BẢNG (Để giữ khẩu hiệu luôn hiện) */
     [data-testid="stDataFrame"] button[title="View fullscreen"] {
         display: none !important;
     }
     
-    /* 3. Tùy chỉnh giao diện bảng */
+    /* 3. Tùy chỉnh giao diện bảng và metric */
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
-    h1 { text-align: center; color: #4da6ff; }
+    h1 { text-align: center; color: #4da6ff; margin-bottom: 20px; }
     div[data-testid="stDataFrame"] { font-size: 14px; }
-    thead tr th:first-child {display:none}
+    thead tr th:first-child {display:none} /* Ẩn cột index */
     tbody th {display:none}
 
-    /* 4. Ẩn Header/Footer mặc định */
+    /* 4. Ẩn Header/Footer mặc định của Streamlit */
     header {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
 
-    /* 5. KHẨU HIỆU "BẤT TỬ" */
+    /* 5. KHẨU HIỆU "BẤT TỬ" (LUÔN GHIM TRÊN ĐẦU) */
     .sticky-marquee {
         position: fixed;
         top: 0;
@@ -101,7 +99,7 @@ st.markdown(f"""
 st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
 
 # ==============================================================================
-# HÀM ĐỌC DỮ LIỆU CÔNG VIỆC (Tab 1)
+# HÀM ĐỌC DỮ LIỆU
 # ==============================================================================
 if st.button("🔄 Cập nhật dữ liệu mới nhất"):
     st.cache_data.clear()
@@ -114,8 +112,6 @@ def load_data_force(link):
     except: return None
 
 df_congviec = load_data_force(LINK_CSV_CONG_VIEC)
-
-# Lưu ý: Không cần tải df_lich nữa vì dùng Google Calendar rồi
 
 if df_congviec is None:
     st.error("⚠️ Chưa đọc được dữ liệu Công Việc. Vui lòng kiểm tra lại Link CSV.")
@@ -252,11 +248,11 @@ with tab1:
             )
 
 # ==============================================================================
-# TAB 2: LỊCH GOOGLE CALENDAR (MỚI)
+# TAB 2: LỊCH GOOGLE CALENDAR
 # ==============================================================================
 with tab2:
     if "http" in LINK_GOOGLE_CALENDAR:
-        st.markdown(f'<iframe src="{LINK_GOOGLE_CALENDAR}" style="border: 0" width="100%" height="800" frameborder="0" scrolling="no"></iframe>', unsafe_allow_html=True)
+        # Nhúng lịch với chiều cao lớn 850px cho thoải mái
+        st.markdown(f'<iframe src="{LINK_GOOGLE_CALENDAR}" style="border: 0" width="100%" height="850" frameborder="0" scrolling="no"></iframe>', unsafe_allow_html=True)
     else:
-        st.info("⚠️ Vui lòng dán Link Google Calendar vào code (dòng 14).")
-        st.warning("Hướng dẫn: Vào Google Calendar -> Cài đặt -> Chọn lịch -> Tích hợp lịch -> Copy link trong thẻ 'src'.")
+        st.info("⚠️ Chưa có link Google Calendar.")
