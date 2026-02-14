@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH DỮ LIỆU (GIỮ NGUYÊN LINK CHUẨN)
+# 🔴 CẤU HÌNH DỮ LIỆU (GIỮ NGUYÊN)
 # ==============================================================================
 LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
@@ -18,14 +18,14 @@ st.markdown("""
 <style>
     .block-container {
         padding-top: 5rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
         max-width: 100% !important;
     }
     [data-testid="stDataFrame"] button[title="View fullscreen"] { display: none !important; }
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
     h1 { text-align: center; color: #4da6ff; }
-    div[data-testid="stDataFrame"] { font-size: 14px; }
+    div[data-testid="stDataFrame"] { font-size: 16px !important; } /* Tăng cỡ chữ bảng công việc */
     thead tr th:first-child {display:none}
     tbody th {display:none}
     header, footer, .stDeployButton {visibility: hidden; display:none;}
@@ -39,15 +39,28 @@ st.markdown("""
         text-transform: uppercase; display: flex; align-items: center;
     }
     
-    /* CSS cho khung trực ban */
+    /* CSS Căn chỉnh Lịch Trực Ban (Hàng Ngang) */
     .duty-box {
-        background-color: #e6f4ea; padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+        background-color: #e6f4ea; padding: 10px; border-radius: 8px; margin-bottom: 10px; 
         border: 1px solid #34a853; font-family: Arial; color: #0d652d;
     }
-    .duty-title { font-weight: bold; font-size: 18px; color: #137333; text-transform: uppercase; }
-    .duty-item { margin-bottom: 5px; font-size: 16px; }
-    .highlight-today { color: #d93025; font-weight: 900; font-size: 17px; border: 2px solid #d93025; padding: 2px 6px; border-radius: 5px; background-color: #fff; }
-    .normal-day { font-weight: bold; }
+    .duty-row {
+        display: flex; flex-wrap: wrap; width: 100%; align-items: flex-start;
+    }
+    .duty-col-half {
+        flex: 1; min-width: 300px; padding: 5px 10px;
+    }
+    .duty-col-left {
+        flex: 3; min-width: 400px; padding: 5px 10px; border-right: 1px dashed #34a853;
+    }
+    .duty-col-right {
+        flex: 1; min-width: 200px; padding: 5px 10px;
+    }
+    .duty-title { font-weight: bold; font-size: 16px; color: #137333; text-transform: uppercase; display: block; margin-bottom: 5px;}
+    .highlight-today { color: #d93025; font-weight: 900; font-size: 16px; border: 1px solid #d93025; padding: 1px 5px; border-radius: 4px; background-color: #fff; }
+    .normal-day { font-weight: bold; color: #333; }
+    .separator { border-bottom: 1px dashed #34a853; margin: 5px 0; width: 100%; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -85,14 +98,13 @@ if df_congviec is None:
     st.error("⚠️ Chưa đọc được dữ liệu. Vui lòng kiểm tra kết nối.")
     st.stop()
 
-# Chuẩn hóa cột
 df_congviec.columns = df_congviec.columns.str.strip()
 for col in df_congviec.columns:
     if "Chỉ" in col and "Đạo" in col: df_congviec.rename(columns={col: "Chỉ Đạo"}, inplace=True)
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD QUẢN LÝ
+# TAB 1: DASHBOARD QUẢN LÝ (GIỮ NGUYÊN)
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch & Trực Ban"])
 
@@ -202,7 +214,7 @@ with tab1:
         )
 
 # ==============================================================================
-# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
+# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN (GIAO DIỆN MỚI 2 HÀNG)
 # ==============================================================================
 with tab2:
     # 🟢🟢🟢 KHU VỰC CHỈNH SỬA HÀNG TUẦN (BẠN SỬA TÊN Ở ĐÂY) 🟢🟢🟢
@@ -220,42 +232,61 @@ with tab2:
     }
     # ============================================================
 
-    # --- XỬ LÝ HIỂN THỊ TRỰC BAN ---
+    # --- XỬ LÝ HIỂN THỊ TRỰC BAN (LAYOUT 2 HÀNG NGANG) ---
     thu_hom_nay = datetime.now().weekday()
     
     html_content = '<div class="duty-box">'
-    html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY HỌC VIỆN:</b> {TRUC_CHI_HUY_HV}</div>'
-    html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY PHÒNG:</b> {TRUC_CHI_HUY_PHONG}</div>'
-    html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
-    html_content += '<div class="duty-item"><span class="duty-title">👮 TRỰC BAN HUẤN LUYỆN (T2-T6):</span></div><div style="margin-top:5px;">'
     
+    # HÀNG 1: TRỰC CHỈ HUY (Chia đôi màn hình)
+    html_content += '<div class="duty-row">'
+    html_content += f'<div class="duty-col-half">🎖️ <b>TRỰC CHỈ HUY HV:</b> {TRUC_CHI_HUY_HV}</div>'
+    html_content += f'<div class="duty-col-half">🎖️ <b>TRỰC CHỈ HUY PHÒNG:</b> {TRUC_CHI_HUY_PHONG}</div>'
+    html_content += '</div>'
+    
+    html_content += '<div class="separator"></div>'
+    
+    # HÀNG 2: TRỰC BAN HL & TRỰC CM (Chia lệch 70-30)
+    html_content += '<div class="duty-row">'
+    
+    # Cột Trái: Trực ban Huấn luyện (T2-T6)
+    html_content += '<div class="duty-col-left">'
+    html_content += '<span class="duty-title">👮 TRỰC BAN HUẤN LUYỆN:</span>'
     for i in range(5):
         ten_thu = f"Thứ {i+2}"
         nguoi_truc = LICH_TRUC_NGAY_THUONG[i]
         if i == thu_hom_nay:
-            html_content += f'<span class="highlight-today">{ten_thu}: {nguoi_truc} (Hôm nay)</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
+            html_content += f'<span class="highlight-today">{ten_thu}: {nguoi_truc}</span> &nbsp; '
         else:
-            html_content += f'<span class="normal-day">{ten_thu}: {nguoi_truc}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
+            html_content += f'<span class="normal-day">{ten_thu}: {nguoi_truc}</span> &nbsp;|&nbsp; '
     html_content += '</div>'
-
-    html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
-    html_content += f'<div class="duty-item"><span class="duty-title">🛠️ TRỰC CHUYÊN MÔN (T7-CN):</span> <span style="font-size:18px; font-weight:bold;">{TRUC_CHUYEN_MON_CUOI_TUAN}</span></div>'
     
-    if thu_hom_nay >= 5:
-        thu_hien_tai = "Thứ 7" if thu_hom_nay == 5 else "Chủ Nhật"
-        html_content += f'<div style="margin-top:5px;"><span class="highlight-today">Hôm nay là {thu_hien_tai}: Đồng chí {TRUC_CHUYEN_MON_CUOI_TUAN} trực</span></div>'
-
+    # Cột Phải: Trực Chuyên Môn (T7-CN)
+    html_content += '<div class="duty-col-right">'
+    html_content += f'<span class="duty-title">🛠️ TRỰC CHUYÊN MÔN:</span>'
+    
+    # Kiểm tra xem hôm nay có phải là ngày trực CM không
+    is_truc_cm_today = (thu_hom_nay >= 5)
+    style_cm = 'class="highlight-today"' if is_truc_cm_today else 'class="normal-day"'
+    
+    html_content += f'<span {style_cm}>T7, CN: {TRUC_CHUYEN_MON_CUOI_TUAN}</span>'
     html_content += '</div>'
+    
+    html_content += '</div></div>' # Đóng duty-row và duty-box
+    
     st.markdown(html_content, unsafe_allow_html=True)
 
-    # --- PHẦN 2: LỊCH GOOGLE (CHẾ ĐỘ TUẦN - BẢNG) ---
+    # --- PHẦN 2: LỊCH GOOGLE (PHÓNG TO) ---
     if "http" in LINK_GOOGLE_CALENDAR:
-        # Ép về chế độ WEEK (Bảng Tuần)
         link_final = LINK_GOOGLE_CALENDAR.replace("mode=AGENDA", "").replace("mode=MONTH", "")
         if "?" in link_final: link_final += "&mode=WEEK"
         else: link_final += "?mode=WEEK"
         
-        # Bật thanh cuộn (scrolling=yes) để xem hết 24h
-        st.markdown(f'<iframe src="{link_final}" style="border: 0" width="100%" height="900" frameborder="0" scrolling="yes"></iframe>', unsafe_allow_html=True)
+        # Dùng kỹ thuật CSS transform scale để phóng to iframe lên 1.2 lần (zoom)
+        # Giúp chữ to hơn, dễ nhìn hơn từ xa
+        st.markdown(f"""
+            <div style="width: 100%; height: 1000px; overflow: hidden;">
+                <iframe src="{link_final}" style="border: 0; width: 100%; height: 1200px; transform: scale(1.0); transform-origin: 0 0;" frameborder="0" scrolling="yes"></iframe>
+            </div>
+        """, unsafe_allow_html=True)
     else:
         st.info("⚠️ Chưa có link Google Calendar.")
