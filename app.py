@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH DỮ LIỆU (GIỮ NGUYÊN)
+# 🔴 CẤU HÌNH DỮ LIỆU (GIỮ NGUYÊN LINK CHUẨN)
 # ==============================================================================
 LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
@@ -38,6 +38,16 @@ st.markdown("""
         font-family: Arial, sans-serif; font-weight: bold; font-size: 20px;
         text-transform: uppercase; display: flex; align-items: center;
     }
+    
+    /* CSS cho khung trực ban */
+    .duty-box {
+        background-color: #e6f4ea; padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+        border: 1px solid #34a853; font-family: Arial; color: #0d652d;
+    }
+    .duty-title { font-weight: bold; font-size: 18px; color: #137333; text-transform: uppercase; }
+    .duty-item { margin-bottom: 5px; font-size: 16px; }
+    .highlight-today { color: #d93025; font-weight: 900; font-size: 17px; border: 2px solid #d93025; padding: 2px 6px; border-radius: 5px; background-color: #fff; }
+    .normal-day { font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,7 +92,7 @@ for col in df_congviec.columns:
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD QUẢN LÝ (GIỮ NGUYÊN ĐẦY ĐỦ)
+# TAB 1: DASHBOARD QUẢN LÝ
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch & Trực Ban"])
 
@@ -116,7 +126,7 @@ with tab1:
         k4.metric("Hôm nay", now.strftime("%d/%m/%Y"))
         st.markdown("---")
 
-        # --- BẢNG TỶ TRỌNG & HIỆU SUẤT (GIỮ NGUYÊN) ---
+        # --- BẢNG TỶ TRỌNG & HIỆU SUẤT ---
         st.subheader("📊 Phân tích hiệu suất nhân sự")
         if tro_ly_col in df_loc.columns and "Trạng Thái" in df_loc.columns:
             analysis = df_loc.groupby(tro_ly_col).agg(
@@ -192,15 +202,12 @@ with tab1:
         )
 
 # ==============================================================================
-# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN (CẬP NHẬT MỚI)
+# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
 # ==============================================================================
 with tab2:
     # 🟢🟢🟢 KHU VỰC CHỈNH SỬA HÀNG TUẦN (BẠN SỬA TÊN Ở ĐÂY) 🟢🟢🟢
-    # ============================================================
     TRUC_CHI_HUY_HV = "Thiếu tướng Hoàng Văn Phai"
     TRUC_CHI_HUY_PHONG = "Đại tá Đỗ Huy Hà"
-    
-    # Người trực chuyên môn Thứ 7 & Chủ Nhật (1 người)
     TRUC_CHUYEN_MON_CUOI_TUAN = "ĐOAN"
 
     # Lịch trực ban ngày thường (Thứ 2 đến Thứ 6)
@@ -213,64 +220,42 @@ with tab2:
     }
     # ============================================================
 
-    # --- XỬ LÝ HIỂN THỊ ---
-    thu_hom_nay = datetime.now().weekday() # 0=T2, 6=CN
+    # --- XỬ LÝ HIỂN THỊ TRỰC BAN ---
+    thu_hom_nay = datetime.now().weekday()
     
-    # CSS cho khung hiển thị
-    st.markdown("""
-    <style>
-        .duty-box {
-            background-color: #e6f4ea; padding: 15px; border-radius: 8px; margin-bottom: 15px; 
-            border: 1px solid #34a853; font-family: Arial; color: #0d652d;
-        }
-        .duty-title { font-weight: bold; font-size: 18px; color: #137333; text-transform: uppercase; }
-        .duty-item { margin-bottom: 5px; font-size: 16px; }
-        .highlight-today { color: #d93025; font-weight: 900; font-size: 17px; border: 2px solid #d93025; padding: 2px 6px; border-radius: 5px; background-color: #fff; }
-        .normal-day { font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Bắt đầu tạo nội dung HTML
     html_content = '<div class="duty-box">'
-    
-    # 1. PHẦN TRỰC CHỈ HUY
     html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY HỌC VIỆN:</b> {TRUC_CHI_HUY_HV}</div>'
     html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY PHÒNG:</b> {TRUC_CHI_HUY_PHONG}</div>'
     html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
-    
-    # 2. PHẦN TRỰC BAN HUẤN LUYỆN (T2-T6)
     html_content += '<div class="duty-item"><span class="duty-title">👮 TRỰC BAN HUẤN LUYỆN (T2-T6):</span></div><div style="margin-top:5px;">'
     
     for i in range(5):
         ten_thu = f"Thứ {i+2}"
         nguoi_truc = LICH_TRUC_NGAY_THUONG[i]
-        
-        # Nếu là hôm nay (và hôm nay là ngày thường)
         if i == thu_hom_nay:
             html_content += f'<span class="highlight-today">{ten_thu}: {nguoi_truc} (Hôm nay)</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
         else:
             html_content += f'<span class="normal-day">{ten_thu}: {nguoi_truc}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
     html_content += '</div>'
 
-    # 3. PHẦN TRỰC CHUYÊN MÔN (T7-CN)
     html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
     html_content += f'<div class="duty-item"><span class="duty-title">🛠️ TRỰC CHUYÊN MÔN (T7-CN):</span> <span style="font-size:18px; font-weight:bold;">{TRUC_CHUYEN_MON_CUOI_TUAN}</span></div>'
     
-    # Kiểm tra xem hôm nay có phải cuối tuần không để highlight
     if thu_hom_nay >= 5:
         thu_hien_tai = "Thứ 7" if thu_hom_nay == 5 else "Chủ Nhật"
         html_content += f'<div style="margin-top:5px;"><span class="highlight-today">Hôm nay là {thu_hien_tai}: Đồng chí {TRUC_CHUYEN_MON_CUOI_TUAN} trực</span></div>'
 
     html_content += '</div>'
-    
-    # Hiển thị ra màn hình
     st.markdown(html_content, unsafe_allow_html=True)
 
-    # --- PHẦN 2: LỊCH GOOGLE ---
+    # --- PHẦN 2: LỊCH GOOGLE (CHẾ ĐỘ TUẦN - BẢNG) ---
     if "http" in LINK_GOOGLE_CALENDAR:
-        link_final = LINK_GOOGLE_CALENDAR.replace("mode=WEEK", "").replace("mode=MONTH", "")
-        if "?" in link_final: link_final += "&mode=AGENDA"
-        else: link_final += "?mode=AGENDA"
-        st.markdown(f'<iframe src="{link_final}" style="border: 0" width="100%" height="800" frameborder="0" scrolling="no"></iframe>', unsafe_allow_html=True)
+        # Ép về chế độ WEEK (Bảng Tuần)
+        link_final = LINK_GOOGLE_CALENDAR.replace("mode=AGENDA", "").replace("mode=MONTH", "")
+        if "?" in link_final: link_final += "&mode=WEEK"
+        else: link_final += "?mode=WEEK"
+        
+        # Bật thanh cuộn (scrolling=yes) để xem hết 24h
+        st.markdown(f'<iframe src="{link_final}" style="border: 0" width="100%" height="900" frameborder="0" scrolling="yes"></iframe>', unsafe_allow_html=True)
     else:
         st.info("⚠️ Chưa có link Google Calendar.")
