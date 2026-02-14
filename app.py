@@ -4,9 +4,9 @@ import random
 from datetime import datetime
 
 # ==============================================================================
-# 🔴 CẤU HÌNH DỮ LIỆU (ĐÃ ĐIỀN CHUẨN)
+# 🔴 CẤU HÌNH DỮ LIỆU (GIỮ NGUYÊN)
 # ==============================================================================
-LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WKjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSWwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
+LINK_CSV_CONG_VIEC = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRoKMQ8kMQ4WkjSvfUqwCi5MhX_NYM1r_C7mqmg8gKSwwVSt_FJPN81FClnnrkzUveirIBDKT9YACw/pub?gid=2034795073&single=true&output=csv"
 LINK_GOOGLE_CALENDAR = "https://calendar.google.com/calendar/embed?src=a432988c8c04defc4e755100b1c8ca67b255a8ccabc45385da0c201e50edb4ed%40group.calendar.google.com&ctz=Asia%2FHo_Chi_Minh"
 
 # ==============================================================================
@@ -82,7 +82,7 @@ for col in df_congviec.columns:
     if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD QUẢN LÝ
+# TAB 1: DASHBOARD QUẢN LÝ (GIỮ NGUYÊN ĐẦY ĐỦ)
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch & Trực Ban"])
 
@@ -116,22 +116,19 @@ with tab1:
         k4.metric("Hôm nay", now.strftime("%d/%m/%Y"))
         st.markdown("---")
 
-        # --- 🟢 PHẦN ĐÃ KHÔI PHỤC: BẢNG TỶ TRỌNG & HIỆU SUẤT ---
+        # --- BẢNG TỶ TRỌNG & HIỆU SUẤT (GIỮ NGUYÊN) ---
         st.subheader("📊 Phân tích hiệu suất nhân sự")
         if tro_ly_col in df_loc.columns and "Trạng Thái" in df_loc.columns:
-            # Tính toán thống kê
             analysis = df_loc.groupby(tro_ly_col).agg(
                 Tong_Viec=("Trạng Thái", "count"),
                 Viec_Da_Xong=("Trạng Thái", lambda x: x.str.contains("Hoàn", na=False).sum()),
                 Tien_Do_TB=("Tiến Độ (%)", "mean")
             ).reset_index()
             
-            # Tính phần trăm
             total_jobs = analysis["Tong_Viec"].sum()
             analysis["Ty_Trong"] = (analysis["Tong_Viec"] / total_jobs * 100) if total_jobs > 0 else 0
             analysis["Ty_Le_HT_That"] = (analysis["Viec_Da_Xong"] / analysis["Tong_Viec"] * 100)
             
-            # Hiển thị bảng có biểu đồ thanh
             st.dataframe(
                 analysis,
                 use_container_width=True,
@@ -195,26 +192,79 @@ with tab1:
         )
 
 # ==============================================================================
-# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
+# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN (CẬP NHẬT MỚI)
 # ==============================================================================
 with tab2:
-    # --- PHẦN 1: THANH HIỂN THỊ TRỰC BAN ---
-    lich_truc = {0: "TUYỂN", 1: "THIẾT", 2: "ĐẠI", 3: "ĐÔNG", 4: "DIỆN", 5: "NGHỈ", 6: "NGHỈ"}
-    thu_hom_nay = datetime.now().weekday()
+    # 🟢🟢🟢 KHU VỰC CHỈNH SỬA HÀNG TUẦN (BẠN SỬA TÊN Ở ĐÂY) 🟢🟢🟢
+    # ============================================================
+    TRUC_CHI_HUY_HV = "Thiếu tướng Hoàng Văn Phai"
+    TRUC_CHI_HUY_PHONG = "Đại tá Đỗ Huy Hà"
     
-    html_truc_ban = """
-    <div style="background-color: #e6f4ea; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #34a853; text-align: center; color: #0d652d; font-family: Arial;">
-        <span style="font-weight: bold; font-size: 18px;">👮 LỊCH TRỰC BAN HUẤN LUYỆN:</span><br><br>
-    """
+    # Người trực chuyên môn Thứ 7 & Chủ Nhật (1 người)
+    TRUC_CHUYEN_MON_CUOI_TUAN = "ĐOAN"
+
+    # Lịch trực ban ngày thường (Thứ 2 đến Thứ 6)
+    LICH_TRUC_NGAY_THUONG = {
+        0: "TUYỂN",   # Thứ 2
+        1: "THIẾT",   # Thứ 3
+        2: "ĐẠI",     # Thứ 4
+        3: "ĐÔNG",    # Thứ 5
+        4: "DIỆN"     # Thứ 6
+    }
+    # ============================================================
+
+    # --- XỬ LÝ HIỂN THỊ ---
+    thu_hom_nay = datetime.now().weekday() # 0=T2, 6=CN
+    
+    # CSS cho khung hiển thị
+    st.markdown("""
+    <style>
+        .duty-box {
+            background-color: #e6f4ea; padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+            border: 1px solid #34a853; font-family: Arial; color: #0d652d;
+        }
+        .duty-title { font-weight: bold; font-size: 18px; color: #137333; text-transform: uppercase; }
+        .duty-item { margin-bottom: 5px; font-size: 16px; }
+        .highlight-today { color: #d93025; font-weight: 900; font-size: 17px; border: 2px solid #d93025; padding: 2px 6px; border-radius: 5px; background-color: #fff; }
+        .normal-day { font-weight: bold; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Bắt đầu tạo nội dung HTML
+    html_content = '<div class="duty-box">'
+    
+    # 1. PHẦN TRỰC CHỈ HUY
+    html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY HỌC VIỆN:</b> {TRUC_CHI_HUY_HV}</div>'
+    html_content += f'<div class="duty-item">🎖️ <b>TRỰC CHỈ HUY PHÒNG:</b> {TRUC_CHI_HUY_PHONG}</div>'
+    html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
+    
+    # 2. PHẦN TRỰC BAN HUẤN LUYỆN (T2-T6)
+    html_content += '<div class="duty-item"><span class="duty-title">👮 TRỰC BAN HUẤN LUYỆN (T2-T6):</span></div><div style="margin-top:5px;">'
+    
     for i in range(5):
         ten_thu = f"Thứ {i+2}"
-        nguoi_truc = lich_truc[i]
+        nguoi_truc = LICH_TRUC_NGAY_THUONG[i]
+        
+        # Nếu là hôm nay (và hôm nay là ngày thường)
         if i == thu_hom_nay:
-            html_truc_ban += f"<span style='color: #d93025; font-weight: 900; font-size: 18px; border: 2px solid #d93025; padding: 3px 8px; border-radius: 5px;'>{ten_thu}: {nguoi_truc} (Hôm nay)</span> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            html_content += f'<span class="highlight-today">{ten_thu}: {nguoi_truc} (Hôm nay)</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
         else:
-            html_truc_ban += f"<span>{ten_thu}: <b>{nguoi_truc}</b></span> &nbsp;&nbsp;|&nbsp;&nbsp; "
-    html_truc_ban += "</div>"
-    st.markdown(html_truc_ban, unsafe_allow_html=True)
+            html_content += f'<span class="normal-day">{ten_thu}: {nguoi_truc}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
+    html_content += '</div>'
+
+    # 3. PHẦN TRỰC CHUYÊN MÔN (T7-CN)
+    html_content += '<hr style="margin: 10px 0; border-top: 1px dashed #34a853;">'
+    html_content += f'<div class="duty-item"><span class="duty-title">🛠️ TRỰC CHUYÊN MÔN (T7-CN):</span> <span style="font-size:18px; font-weight:bold;">{TRUC_CHUYEN_MON_CUOI_TUAN}</span></div>'
+    
+    # Kiểm tra xem hôm nay có phải cuối tuần không để highlight
+    if thu_hom_nay >= 5:
+        thu_hien_tai = "Thứ 7" if thu_hom_nay == 5 else "Chủ Nhật"
+        html_content += f'<div style="margin-top:5px;"><span class="highlight-today">Hôm nay là {thu_hien_tai}: Đồng chí {TRUC_CHUYEN_MON_CUOI_TUAN} trực</span></div>'
+
+    html_content += '</div>'
+    
+    # Hiển thị ra màn hình
+    st.markdown(html_content, unsafe_allow_html=True)
 
     # --- PHẦN 2: LỊCH GOOGLE ---
     if "http" in LINK_GOOGLE_CALENDAR:
