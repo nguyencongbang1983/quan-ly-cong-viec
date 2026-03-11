@@ -25,18 +25,31 @@ st.markdown("""
     [data-testid="stDataFrame"] button[title="View fullscreen"] { display: none !important; }
     div[data-testid="stMetric"] { background-color: #262730; border: 1px solid #4f4f4f; padding: 10px; border-radius: 5px; }
     h1 { text-align: center; color: #4da6ff; margin-bottom: 0rem; padding-bottom: 0rem; }
-    div[data-testid="stDataFrame"] { font-size: 16px !important; } /* Tăng cỡ chữ bảng công việc */
+    div[data-testid="stDataFrame"] { font-size: 16px !important; }
     thead tr th:first-child {display:none}
     tbody th {display:none}
     header, footer, .stDeployButton {visibility: hidden; display:none;}
 
-    .sticky-marquee {
+    /* Cập nhật CSS để chạy chữ mượt mà bằng Animation */
+    .sticky-marquee-container {
         position: fixed; top: 0; left: 0; width: 100vw;
         background-color: #fff3cd; color: #856404;
         z-index: 2147483647; border-bottom: 3px solid #ffcc00;
         padding: 10px 0; box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
         font-family: Arial, sans-serif; font-weight: bold; font-size: 20px;
-        text-transform: uppercase; display: flex; align-items: center;
+        text-transform: uppercase;
+        overflow: hidden;
+        white-space: nowrap;
+        display: block;
+    }
+    .scroll-text {
+        display: inline-block;
+        padding-left: 100%;
+        animation: scroll-left 25s linear infinite; /* Chỉnh 25s để tốc độ vừa phải */
+    }
+    @keyframes scroll-left {
+        0% { transform: translateX(0%); }
+        100% { transform: translateX(-100%); }
     }
     
     /* CSS Căn chỉnh Lịch Trực Ban (Hàng Ngang) */
@@ -87,12 +100,12 @@ try:
 except Exception as e:
     cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
-# Ép width: 100% và display: block để chữ chạy mượt mà
+# Hiển thị chữ chạy bằng công nghệ mới
 st.markdown(f"""
-    <div class="sticky-marquee">
-        <marquee style="width: 100%; display: block;" scrollamount="12">
+    <div class="sticky-marquee-container">
+        <div class="scroll-text">
             📢 THÔNG ĐIỆP: {cau_hom_nay} &nbsp;&nbsp;|&nbsp;&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!
-        </marquee>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -100,7 +113,7 @@ st.markdown(f"""
 col_logo, col_title = st.columns([1, 11])
 with col_logo:
     try:
-        # Load file logo.jpg (Đã đổi tên chuẩn)
+        # Tải logo chuẩn từ file đã up
         st.image("logo.jpg", use_container_width=True)
     except Exception:
         st.error("⚠️ Không tìm thấy logo.jpg")
