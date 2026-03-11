@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# KHẨU HIỆU & LOGO [ĐÃ CẬP NHẬT MỚI]
+# KHẨU HIỆU & LOGO
 # ==============================================================================
 danh_sach_khau_hieu = [
     "🚀 Việc hôm nay chớ để ngày mai - Hành động ngay!",
@@ -87,16 +87,23 @@ try:
 except Exception as e:
     cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
-st.markdown(f"""<div class="sticky-marquee"><marquee scrollamount="12">📢 THÔNG ĐIỆP: {cau_hom_nay} &nbsp;|&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!</marquee></div>""", unsafe_allow_html=True)
+# Ép width: 100% và display: block để chữ chạy mượt mà
+st.markdown(f"""
+    <div class="sticky-marquee">
+        <marquee style="width: 100%; display: block;" scrollamount="12">
+            📢 THÔNG ĐIỆP: {cau_hom_nay} &nbsp;&nbsp;|&nbsp;&nbsp; 📢 HÃY CÙNG NHAU HOÀN THÀNH TỐT NHIỆM VỤ!
+        </marquee>
+    </div>
+""", unsafe_allow_html=True)
 
 # Cấu trúc cột chèn Logo cạnh Tiêu đề
 col_logo, col_title = st.columns([1, 11])
 with col_logo:
     try:
-        # Load file ảnh.jpg
-        st.image("ảnh.jpg", use_container_width=True)
+        # Load file logo.jpg (Đã đổi tên chuẩn)
+        st.image("logo.jpg", use_container_width=True)
     except Exception:
-        pass # Nếu chưa có file ảnh, tạm thời bỏ qua không báo lỗi to
+        st.error("⚠️ Không tìm thấy logo.jpg")
 
 with col_title:
     st.title("🌐 Hệ Thống Quản Lý & Điều Hành")
