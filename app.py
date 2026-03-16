@@ -264,17 +264,17 @@ with tab1:
 # ==============================================================================
 with tab2:
     # 🟢🟢🟢 KHU VỰC CHỈNH SỬA HÀNG TUẦN (BẠN SỬA TÊN Ở ĐÂY) 🟢🟢🟢
-    TRUC_CHI_HUY_HV = "Thiếu tướng Hoàng Văn Phai"
-    TRUC_CHI_HUY_PHONG = "Đại tá Đào Xuân Nhã"
-    TRUC_CHUYEN_MON_CUOI_TUAN = "Thiết"
+    TRUC_CHI_HUY_HV = "Thiếu tướng Vũ Đức Long"
+    TRUC_CHI_HUY_PHONG = "Đại tá Đỗ Huy Hà"
+    TRUC_CHUYEN_MON_CUOI_TUAN = "Diện"
 
     # Lịch trực ban ngày thường (Thứ 2 đến Thứ 6)
     LICH_TRUC_NGAY_THUONG = {
-        0: "Diện",   # Thứ 2
-        1: "Thiết",  # Thứ 3
-        2: "Đông",   # Thứ 4
+        0: "Tuyển",   # Thứ 2
+        1: "Diện",  # Thứ 3
+        2: "Thiết",   # Thứ 4
         3: "Hà",     # Thứ 5
-        4: "Đại"     # Thứ 6
+        4: "Đông"     # Thứ 6
     }
     # ============================================================
 
