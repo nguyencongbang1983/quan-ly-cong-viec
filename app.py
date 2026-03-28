@@ -30,7 +30,6 @@ st.markdown("""
     tbody th {display:none}
     header, footer, .stDeployButton {visibility: hidden; display:none;}
 
-    /* Cập nhật CSS để chạy chữ mượt mà bằng Animation */
     .sticky-marquee-container {
         position: fixed; top: 0; left: 0; width: 100vw;
         background-color: #fff3cd; color: #856404;
@@ -45,14 +44,13 @@ st.markdown("""
     .scroll-text {
         display: inline-block;
         padding-left: 100%;
-        animation: scroll-left 25s linear infinite; /* Chỉnh 25s để tốc độ vừa phải */
+        animation: scroll-left 25s linear infinite;
     }
     @keyframes scroll-left {
         0% { transform: translateX(0%); }
         100% { transform: translateX(-100%); }
     }
-    
-    /* CSS Căn chỉnh Lịch Trực Ban (Hàng Ngang) */
+
     .duty-box {
         background-color: #e6f4ea; padding: 10px; border-radius: 8px; margin-bottom: 10px; 
         border: 1px solid #34a853; font-family: Arial; color: #0d652d;
@@ -92,15 +90,13 @@ danh_sach_khau_hieu = [
     "🤝 Kỷ cương, Trách nhiệm, Sáng tạo, Hiệu quả – Xứng danh bề dày 70 năm truyền thống Phòng Đào tạo!"
 ]
 
-# Thuật toán đổi khẩu hiệu theo khung 2 tiếng
 try:
     gio_hien_tai = datetime.now().hour
     chi_so_kh = (gio_hien_tai // 2) % len(danh_sach_khau_hieu)
     cau_hom_nay = danh_sach_khau_hieu[chi_so_kh]
-except Exception as e:
+except:
     cau_hom_nay = "Chúc bạn một ngày làm việc hiệu quả!"
 
-# Hiển thị chữ chạy bằng công nghệ mới
 st.markdown(f"""
     <div class="sticky-marquee-container">
         <div class="scroll-text">
@@ -109,13 +105,11 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Cấu trúc cột chèn Logo cạnh Tiêu đề
 col_logo, col_title = st.columns([1, 11])
 with col_logo:
     try:
-        # Tải logo chuẩn từ file đã up
         st.image("logo.jpg", use_container_width=True)
-    except Exception:
+    except:
         st.error("⚠️ Không tìm thấy logo.jpg")
 
 with col_title:
@@ -124,14 +118,16 @@ with col_title:
 # ==============================================================================
 # HÀM ĐỌC DỮ LIỆU
 # ==============================================================================
-if st.button("🔄 Cập nhật dữ liệu"): st.cache_data.clear()
+if st.button("🔄 Cập nhật dữ liệu"):
+    st.cache_data.clear()
 
 def load_data(link):
     try:
-        if "?" in link: link = f"{link}&t={datetime.now().timestamp()}"
-        else: link = f"{link}?t={datetime.now().timestamp()}"
+        sep = "&" if "?" in link else "?"
+        link = f"{link}{sep}t={datetime.now().timestamp()}"
         return pd.read_csv(link)
-    except: return None
+    except:
+        return None
 
 df_congviec = load_data(LINK_CSV_CONG_VIEC)
 
@@ -141,72 +137,133 @@ if df_congviec is None:
 
 df_congviec.columns = df_congviec.columns.str.strip()
 for col in df_congviec.columns:
-    if "Chỉ" in col and "Đạo" in col: df_congviec.rename(columns={col: "Chỉ Đạo"}, inplace=True)
-    if "Trạng" in col and "Thái" in col: df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
+    if "Chỉ" in col and "Đạo" in col:
+        df_congviec.rename(columns={col: "Chỉ Đạo"}, inplace=True)
+    if "Trạng" in col and "Thái" in col:
+        df_congviec.rename(columns={col: "Trạng Thái"}, inplace=True)
 
 # ==============================================================================
-# TAB 1: DASHBOARD QUẢN LÝ 
+# 🔑 HÀM TÍNH NGÀY CÒN LẠI (dùng chung toàn app)
+# ==============================================================================
+def tinh_ngay_con_lai(han_chot, now):
+    """
+    Trả về (số nguyên ngày, chuỗi hiển thị)
+    - Dương: còn X ngày
+    - 0    : hôm nay
+    - Âm   : đã trễ
+    - None : không có hạn chót
+    """
+    if pd.isna(han_chot):
+        return None, ""
+    
+    han = pd.Timestamp(han_chot).normalize()
+    hom_nay = pd.Timestamp(now).normalize()
+    so_ngay = (han - hom_nay).days
+
+    if so_ngay > 1:
+        chu = f"{so_ngay} ngày"
+    elif so_ngay == 1:
+        chu = "⚠️ Còn 1 ngày!"
+    elif so_ngay == 0:
+        chu = "⚠️ Hôm nay!"
+    else:
+        chu = f"🔴 Trễ {abs(so_ngay)} ngày"
+
+    return so_ngay, chu
+
+# ==============================================================================
+# TAB 1: DASHBOARD QUẢN LÝ
 # ==============================================================================
 tab1, tab2 = st.tabs(["📊 Dashboard Quản Lý", "📅 Lịch & Trực Ban"])
 
 with tab1:
     df = df_congviec.copy()
-    if "Hạn Chót" in df.columns: df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
-    if "Tiến Độ (%)" in df.columns: df["Tiến Độ (%)"] = df["Tiến Độ (%)"].fillna(0)
+    now = datetime.now()
+
+    if "Hạn Chót" in df.columns:
+        df["Hạn Chót"] = pd.to_datetime(df["Hạn Chót"], dayfirst=True, errors='coerce')
+
+    # ✅ Tính cột "Ngày Còn Lại" realtime thay thế "Tiến Độ (%)"
+    if "Hạn Chót" in df.columns:
+        df[["_so_ngay", "Ngày Còn Lại"]] = df["Hạn Chót"].apply(
+            lambda x: pd.Series(tinh_ngay_con_lai(x, now))
+        )
+    else:
+        df["_so_ngay"] = None
+        df["Ngày Còn Lại"] = ""
 
     # --- BỘ LỌC ---
     c1, c2 = st.columns(2)
     tro_ly_col = "Tên Trợ Lý" if "Tên Trợ Lý" in df.columns else df.columns[0]
-    with c1: selected_user = st.multiselect("Nhân sự:", df[tro_ly_col].unique(), default=df[tro_ly_col].unique())
-    with c2: 
+    with c1:
+        selected_user = st.multiselect("Nhân sự:", df[tro_ly_col].unique(), default=df[tro_ly_col].unique())
+    with c2:
         status_list = df["Trạng Thái"].unique() if "Trạng Thái" in df.columns else []
         selected_status = st.multiselect("Trạng thái:", status_list, default=status_list)
 
     df_loc = df[df[tro_ly_col].isin(selected_user)].copy()
-    if selected_status: df_loc = df_loc[df_loc["Trạng Thái"].isin(selected_status)]
+    if selected_status:
+        df_loc = df_loc[df_loc["Trạng Thái"].isin(selected_status)]
 
     # --- KPI TỔNG QUAN ---
     if not df_loc.empty:
         k1, k2, k3, k4 = st.columns(4)
-        now = datetime.now()
         tong = len(df_loc)
         xong = len(df_loc[df_loc["Trạng Thái"].str.contains("Hoàn", na=False)])
-        tre = len(df_loc[(~df_loc["Trạng Thái"].str.contains("Hoàn", na=False)) & (df_loc["Hạn Chót"] < now)])
-        
+        tre  = len(df_loc[
+            (~df_loc["Trạng Thái"].str.contains("Hoàn", na=False)) &
+            (df_loc["Hạn Chót"] < now)
+        ]) if "Hạn Chót" in df_loc.columns else 0
+
         k1.metric("Tổng việc", tong)
         k2.metric("Đã xong", xong)
         k3.metric("🚨 Quá hạn", tre)
         k4.metric("Hôm nay", now.strftime("%d/%m/%Y"))
         st.markdown("---")
 
-        # --- BẢNG TỶ TRỌNG & HIỆU SUẤT ---
+        # --- BẢNG PHÂN TÍCH HIỆU SUẤT NHÂN SỰ ---
         st.subheader("📊 Phân tích hiệu suất nhân sự")
         if tro_ly_col in df_loc.columns and "Trạng Thái" in df_loc.columns:
-            analysis = df_loc.groupby(tro_ly_col).agg(
-                Tong_Viec=("Trạng Thái", "count"),
-                Viec_Da_Xong=("Trạng Thái", lambda x: x.str.contains("Hoàn", na=False).sum())
-            )
-            if "Tiến Độ (%)" in df_loc.columns:
-                tien_do_tb = df_loc.groupby(tro_ly_col)["Tiến Độ (%)"].mean()
-                analysis = analysis.join(tien_do_tb).rename(columns={"Tiến Độ (%)": "Tien_Do_TB"})
-            else:
-                analysis["Tien_Do_TB"] = 0
-            
-            analysis = analysis.reset_index()
+
+            def phan_tich_nhom(grp):
+                tong_viec  = len(grp)
+                da_xong    = grp["Trạng Thái"].str.contains("Hoàn", na=False).sum()
+                viec_con    = grp[~grp["Trạng Thái"].str.contains("Hoàn", na=False)]
+                # Ngày còn lại trung bình (chỉ tính việc chưa xong, có hạn chót)
+                so_ngay_hd = viec_con["_so_ngay"].dropna()
+                ncl_tb = so_ngay_hd.mean() if len(so_ngay_hd) > 0 else None
+                return pd.Series({
+                    "Tong_Viec"  : tong_viec,
+                    "Viec_Da_Xong": da_xong,
+                    "NCL_TB"     : ncl_tb          # Ngày còn lại trung bình
+                })
+
+            analysis = df_loc.groupby(tro_ly_col).apply(phan_tich_nhom).reset_index()
             total_jobs = analysis["Tong_Viec"].sum()
             analysis["Ty_Trong"] = (analysis["Tong_Viec"] / total_jobs * 100) if total_jobs > 0 else 0
-            analysis["Ty_Le_HT_That"] = (analysis["Viec_Da_Xong"] / analysis["Tong_Viec"] * 100)
-            
+            analysis["Ty_Le_HT"] = (analysis["Viec_Da_Xong"] / analysis["Tong_Viec"] * 100)
+
+            # Nhãn NCL_TB dễ đọc
+            def nhan_ncl(val):
+                if pd.isna(val): return "—"
+                val = int(round(val))
+                if val > 0:   return f"{val} ngày"
+                elif val == 0: return "⚠️ Hôm nay"
+                else:          return f"🔴 Trễ {abs(val)} ngày"
+
+            analysis["NCL_TB_Label"] = analysis["NCL_TB"].apply(nhan_ncl)
+
             st.dataframe(
                 analysis,
                 use_container_width=True,
                 column_config={
-                    tro_ly_col: st.column_config.TextColumn("Nhân Sự"),
-                    "Tong_Viec": st.column_config.NumberColumn("Tổng Việc"),
-                    "Viec_Da_Xong": st.column_config.NumberColumn("Đã Xong"),
-                    "Ty_Trong": st.column_config.ProgressColumn("Tỷ Trọng (%)", format="%.1f%%", min_value=0, max_value=100),
-                    "Ty_Le_HT_That": st.column_config.ProgressColumn("Tỷ Lệ HT (%)", format="%.1f%%", min_value=0, max_value=100),
-                    "Tien_Do_TB": st.column_config.NumberColumn("Tiến Độ TB", format="%.1f%%")
+                    tro_ly_col       : st.column_config.TextColumn("Nhân Sự"),
+                    "Tong_Viec"      : st.column_config.NumberColumn("Tổng Việc"),
+                    "Viec_Da_Xong"   : st.column_config.NumberColumn("Đã Xong"),
+                    "Ty_Trong"       : st.column_config.ProgressColumn("Tỷ Trọng (%)", format="%.1f%%", min_value=0, max_value=100),
+                    "Ty_Le_HT"       : st.column_config.ProgressColumn("Tỷ Lệ HT (%)", format="%.1f%%", min_value=0, max_value=100),
+                    "NCL_TB"         : None,                                            # Ẩn cột số thô
+                    "NCL_TB_Label"   : st.column_config.TextColumn("⏳ Ngày CL Trung Bình"),
                 },
                 hide_index=True
             )
@@ -215,119 +272,113 @@ with tab1:
     # --- DANH SÁCH CHI TIẾT ---
     st.subheader("📋 Danh sách công việc chi tiết")
     hien_thi_xong = st.checkbox("✅ Hiển thị việc đã xong", value=False)
-    
+
     if "Trạng Thái" in df_loc.columns:
         df_display = df_loc.copy()
+
         def xu_ly_row(row):
-            tt = str(row["Trạng Thái"])
-            hc = row.get("Hạn Chót", pd.NaT)
+            tt   = str(row["Trạng Thái"])
+            hc   = row.get("Hạn Chót", pd.NaT)
             sort = 2
-            if 'Hoàn' in tt: sort = 1 
+            if "Hoàn" in tt:
+                sort = 1
             elif pd.notna(hc):
-                ngay_con = (hc - now).days
-                if hc < now: tt = f"{tt} (Trễ {(now-hc).days} ngày)"; sort = 4
-                elif 0 <= ngay_con <= 3: tt = f"{tt} (🔥 Gấp: Còn {ngay_con} ngày)"; sort = 3
-            elif 'Chậm' in tt: sort = 4
+                so_ngay = (pd.Timestamp(hc).normalize() - pd.Timestamp(now).normalize()).days
+                if so_ngay < 0:
+                    tt   = f"{tt} (Trễ {abs(so_ngay)} ngày)"
+                    sort = 4
+                elif so_ngay <= 3:
+                    tt   = f"{tt} (🔥 Gấp: Còn {so_ngay} ngày)"
+                    sort = 3
+            elif "Chậm" in tt:
+                sort = 4
             return tt, sort
 
-        df_display[['Trạng Thái Hiển Thị', 'Sort_Order']] = df_display.apply(lambda x: pd.Series(xu_ly_row(x)), axis=1)
+        df_display[["Trạng Thái Hiển Thị", "Sort_Order"]] = df_display.apply(
+            lambda x: pd.Series(xu_ly_row(x)), axis=1
+        )
         df_display["Trạng Thái"] = df_display["Trạng Thái Hiển Thị"]
-        
-        if not hien_thi_xong: df_display = df_display[df_display['Sort_Order'] != 1]
-        
+
+        if not hien_thi_xong:
+            df_display = df_display[df_display["Sort_Order"] != 1]
+
         cols_sort = ["Sort_Order", "Hạn Chót"] if "Hạn Chót" in df_display.columns else ["Sort_Order"]
         df_display = df_display.sort_values(by=cols_sort, ascending=[False, True])
 
-        cols_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Chỉ Đạo", "Trạng Thái", "Tiến Độ (%)", "Hạn Chót", "Sort_Order"]
+        # ✅ Cột hiển thị: thay "Tiến Độ (%)" bằng "Ngày Còn Lại"
+        cols_show = ["Tên Trợ Lý", "Nhiệm Vụ", "Chỉ Đạo", "Trạng Thái", "Ngày Còn Lại", "Hạn Chót", "Sort_Order"]
         final_cols = [c for c in cols_show if c in df_display.columns]
 
         def to_mau(row):
             s = row.get("Sort_Order", 2)
-            if s == 1: return ['background-color: #28a745; color: white'] * len(row)
-            if s == 4: return ['background-color: #ff4b4b; color: white; font-weight: bold'] * len(row)
-            if s == 3: return ['background-color: #ff8c00; color: white; font-weight: bold'] * len(row)
-            return ['background-color: #ffd700; color: black'] * len(row)
+            if s == 1: return ["background-color: #28a745; color: white"] * len(row)
+            if s == 4: return ["background-color: #ff4b4b; color: white; font-weight: bold"] * len(row)
+            if s == 3: return ["background-color: #ff8c00; color: white; font-weight: bold"] * len(row)
+            return ["background-color: #ffd700; color: black"] * len(row)
 
         h_table = (len(df_display) + 1) * 35 + 3 if len(df_display) > 0 else 150
         st.dataframe(
             df_display[final_cols].style.apply(to_mau, axis=1),
-            use_container_width=True, height=h_table if h_table > 150 else 150,
+            use_container_width=True,
+            height=max(h_table, 150),
             column_config={
-                "Hạn Chót": st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
-                "Tiến Độ (%)": st.column_config.NumberColumn("Tiến Độ", format="%.0f%%"),
-                "Sort_Order": None
+                "Hạn Chót"     : st.column_config.DateColumn("Hạn Chót", format="DD/MM/YYYY"),
+                "Ngày Còn Lại" : st.column_config.TextColumn("⏳ Ngày Còn Lại"),
+                "Sort_Order"   : None
             }
         )
 
 # ==============================================================================
-# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN (GIAO DIỆN MỚI 2 HÀNG)
+# TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
 # ==============================================================================
 with tab2:
-    # 🟢🟢🟢 KHU VỰC CHỈNH SỬA HÀNG TUẦN (BẠN SỬA TÊN Ở ĐÂY) 🟢🟢🟢
-    TRUC_CHI_HUY_HV = "Thiếu tướng Nguyyễn Huy Hoàng"
-    TRUC_CHI_HUY_PHONG = "Đại tá Nguyễn Đình Bắc"
+    TRUC_CHI_HUY_HV       = "Thiếu tướng Nguyyễn Huy Hoàng"
+    TRUC_CHI_HUY_PHONG    = "Đại tá Nguyễn Đình Bắc"
     TRUC_CHUYEN_MON_CUOI_TUAN = "Hà"
 
-    # Lịch trực ban ngày thường (Thứ 2 đến Thứ 6)
     LICH_TRUC_NGAY_THUONG = {
-        0: "Diện",   # Thứ 2
-        1: "Hà",  # Thứ 3
-        2: "Tuyển",   # Thứ 4
-        3: "Đại",     # Thứ 5
-        4: "Thiết"     # Thứ 6
+        0: "Diện",
+        1: "Hà",
+        2: "Tuyển",
+        3: "Đại",
+        4: "Thiết"
     }
-    # ============================================================
 
-    # --- XỬ LÝ HIỂN THỊ TRỰC BAN (LAYOUT 2 HÀNG NGANG) ---
-    thu_hom_nay = datetime.now().weekday()
-    
+    thu_hom_nay  = datetime.now().weekday()
     html_content = '<div class="duty-box">'
-    
-    # HÀNG 1: TRỰC CHỈ HUY (Chia đôi màn hình)
+
     html_content += '<div class="duty-row">'
     html_content += f'<div class="duty-col-half">🎖️ <b>TRỰC CHỈ HUY HV:</b> {TRUC_CHI_HUY_HV}</div>'
     html_content += f'<div class="duty-col-half">🎖️ <b>TRỰC CHỈ HUY PHÒNG:</b> {TRUC_CHI_HUY_PHONG}</div>'
     html_content += '</div>'
-    
     html_content += '<div class="separator"></div>'
-    
-    # HÀNG 2: TRỰC BAN HL & TRỰC CM (Chia lệch 70-30)
+
     html_content += '<div class="duty-row">'
-    
-    # Cột Trái: Trực ban Huấn luyện (T2-T6)
     html_content += '<div class="duty-col-left">'
     html_content += '<span class="duty-title">👮 TRỰC BAN HUẤN LUYỆN:</span>'
     for i in range(5):
-        ten_thu = f"Thứ {i+2}"
-        nguoi_truc = LICH_TRUC_NGAY_THUONG[i]
+        ten_thu     = f"Thứ {i+2}"
+        nguoi_truc  = LICH_TRUC_NGAY_THUONG[i]
         if i == thu_hom_nay:
             html_content += f'<span class="highlight-today">{ten_thu}: {nguoi_truc}</span> &nbsp; '
         else:
             html_content += f'<span class="normal-day">{ten_thu}: {nguoi_truc}</span> &nbsp;|&nbsp; '
     html_content += '</div>'
-    
-    # Cột Phải: Trực Chuyên Môn (T7-CN)
+
     html_content += '<div class="duty-col-right">'
-    html_content += f'<span class="duty-title">🛠️ TRỰC CHUYÊN MÔN:</span>'
-    
-    # Kiểm tra xem hôm nay có phải là ngày trực CM không
+    html_content += '<span class="duty-title">🛠️ TRỰC CHUYÊN MÔN:</span>'
     is_truc_cm_today = (thu_hom_nay >= 5)
     style_cm = 'class="highlight-today"' if is_truc_cm_today else 'class="normal-day"'
-    
     html_content += f'<span {style_cm}>T7, CN: {TRUC_CHUYEN_MON_CUOI_TUAN}</span>'
     html_content += '</div>'
-    
-    html_content += '</div></div>' # Đóng duty-row và duty-box
-    
+
+    html_content += '</div></div>'
     st.markdown(html_content, unsafe_allow_html=True)
 
-    # --- PHẦN 2: LỊCH GOOGLE (PHÓNG TO) ---
     if "http" in LINK_GOOGLE_CALENDAR:
         link_final = LINK_GOOGLE_CALENDAR.replace("mode=AGENDA", "").replace("mode=MONTH", "")
-        if "?" in link_final: link_final += "&mode=WEEK"
-        else: link_final += "?mode=WEEK"
-        
-        # Dùng kỹ thuật CSS transform scale để phóng to iframe lên 1.2 lần
+        sep = "&" if "?" in link_final else "?"
+        link_final += f"{sep}mode=WEEK"
         st.markdown(f"""
             <div style="width: 100%; height: 1000px; overflow: hidden;">
                 <iframe src="{link_final}" style="border: 0; width: 100%; height: 1200px; transform: scale(1.0); transform-origin: 0 0;" frameborder="0" scrolling="yes"></iframe>
