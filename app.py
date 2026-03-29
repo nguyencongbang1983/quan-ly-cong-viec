@@ -332,16 +332,16 @@ with tab1:
 # TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
 # ==============================================================================
 with tab2:
-    TRUC_CHI_HUY_HV       = "Thiếu tướng Nguyyễn Huy Hoàng"
-    TRUC_CHI_HUY_PHONG    = "Đại tá Nguyễn Đình Bắc"
-    TRUC_CHUYEN_MON_CUOI_TUAN = "Hà"
+    TRUC_CHI_HUY_HV       = "Thiếu tướng Đàm Minh Diện"
+    TRUC_CHI_HUY_PHONG    = "Đại tá Đào Xuân Nhã"
+    TRUC_CHUYEN_MON_CUOI_TUAN = "Quang"
 
     LICH_TRUC_NGAY_THUONG = {
         0: "Diện",
-        1: "Hà",
-        2: "Tuyển",
-        3: "Đại",
-        4: "Thiết"
+        1: "Đông",
+        2: "Hà",
+        3: "Tuyển",
+        4: "Đại"
     }
 
     thu_hom_nay  = datetime.now().weekday()
