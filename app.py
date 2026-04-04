@@ -332,15 +332,15 @@ with tab1:
 # TAB 2: LỊCH GOOGLE CALENDAR & TRỰC BAN
 # ==============================================================================
 with tab2:
-    TRUC_CHI_HUY_HV       = "Thiếu tướng Đàm Minh Diện"
-    TRUC_CHI_HUY_PHONG    = "Đại tá Đào Xuân Nhã"
-    TRUC_CHUYEN_MON_CUOI_TUAN = "Quang"
+    TRUC_CHI_HUY_HV       = "Thiếu tướng Hoàng Văn Phai"
+    TRUC_CHI_HUY_PHONG    = "Đại tá Đỗ Huy Hà"
+    TRUC_CHUYEN_MON_CUOI_TUAN = "Đại"
 
     LICH_TRUC_NGAY_THUONG = {
-        0: "Diện",
-        1: "Đông",
-        2: "Hà",
-        3: "Tuyển",
+        0: "Thiết",
+        1: "Diện",
+        2: "Đông",
+        3: "Hà",
         4: "Đại"
     }
 
